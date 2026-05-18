@@ -22,31 +22,46 @@ def parse_tarikh(tarikh_str):
 default_lokasi = "Belum Ditetapkan (Sila isi di Panel Admin)"
 default_in = str(datetime.date.today())
 default_out = str(datetime.date.today())
+default_maps = "https://maps.google.com"
+default_waze = "https://waze.com"
 
-lokasi_kem, check_in, check_out = default_lokasi, default_in, default_out
+lokasi_kem, check_in, check_out, maps_url, waze_url = default_lokasi, default_in, default_out, default_maps, default_waze
 
 try:
     info_db = conn.read(worksheet="Info_Kem", ttl=0)
-    if not info_db.empty and 'ID_Trip' in info_db.columns:
-        info_db['ID_Trip'] = info_db['ID_Trip'].astype(str).replace('nan', '').str.strip()
-        info_semasa = info_db[info_db['ID_Trip'] == current_trip]
-        
+    if not info_db.empty:
+        # Bersihkan data kolom terlebih dahulu
+        for col in info_db.columns:
+            info_db[col] = info_db[col].astype(str).replace('nan', '').str.strip()
+            
+        # Tapis info lokasi berdasarkan trip saat ini
+        if current_trip:
+            info_semasa = info_db[info_db['ID_Trip'] == current_trip]
+        else:
+            info_semasa = info_db # Jika session kosong, ambil data pertama yang ada
+            
         if not info_semasa.empty:
             lokasi_kem = info_semasa.iloc[0].get('Lokasi', default_lokasi)
             check_in = info_semasa.iloc[0].get('Check_In', default_in)
             check_out = info_semasa.iloc[0].get('Check_Out', default_out)
+            maps_url = info_semasa.iloc[0].get('Maps_URL', default_maps)
+            waze_url = info_semasa.iloc[0].get('Waze_URL', default_waze)
 except:
     pass
 
-# Auto-Jana Link & Embed Map berdasarkan Nama Lokasi
-lokasi_url = urllib.parse.quote(lokasi_kem)
-maps_url = f"https://www.google.com/maps/search/?api=1&query={lokasi_url}"
-waze_url = f"https://waze.com/ul?q={lokasi_url}"
-embed_map_url = f"https://www.google.com/maps?q={lokasi_url}&output=embed"
+# Jika pautan peta di database kosong atau default, sistem akan otomatis membuatnya
+if not maps_url or maps_url == default_maps or maps_url == "":
+    lokasi_url = urllib.parse.quote(lokasi_kem)
+    maps_url = f"https://maps.google.com/?q={lokasi_url}"
+    waze_url = f"https://waze.com/ul?q={lokasi_url}"
+
+# Format tautan khusus untuk kebutuhan tampilan peta terbenam (Embed Iframe)
+lokasi_url_embed = urllib.parse.quote(lokasi_kem)
+embed_map_url = f"https://maps.google.com/maps?q={lokasi_url_embed}&output=embed"
 
 # Paparkan Maklumat Lokasi Tapak Semasa
 st.subheader("📍 Info Tapak Perkhemahan")
-col1, col2 = st.columns([1, 1])
+col1, col2 = st.columns(2)
 
 with col1:
     st.info(f"""
@@ -59,7 +74,6 @@ with col1:
     st.link_button("🚙 Buka di Waze", waze_url)
 
 with col2:
-    # Paparkan Embedded Google Maps secara automatik!
     if lokasi_kem != default_lokasi:
         st.components.v1.iframe(embed_map_url, height=200)
     else:
@@ -73,16 +87,18 @@ st.subheader("🗓️ Jadual Aktiviti Kumpulan")
 try:
     tentatif_db = conn.read(worksheet="Tentatif", ttl=0)
     
-    if not tentatif_db.empty and 'ID_Trip' in tentatif_db.columns:
-        tentatif_db['ID_Trip'] = tentatif_db['ID_Trip'].astype(str).replace('nan', '').str.strip()
-        tentatif_semasa = tentatif_db[tentatif_db['ID_Trip'] == current_trip].copy()
-        
-        for col in ['Hari', 'Masa', 'Aktiviti', 'Nota']:
-            if col in tentatif_semasa.columns:
-                tentatif_semasa[col] = tentatif_semasa[col].astype(str).replace('nan', '').str.strip()
+    if not tentatif_db.empty:
+        for col in tentatif_db.columns:
+            tentatif_db[col] = tentatif_db[col].astype(str).replace('nan', '').str.strip()
+            
+        if current_trip and 'ID_Trip' in tentatif_db.columns:
+            tentatif_semasa = tentatif_db[tentatif_db['ID_Trip'] == current_trip].copy()
+        else:
+            tentatif_semasa = tentatif_db.copy()
                 
         if not tentatif_semasa.empty:
-            st.dataframe(tentatif_semasa[['Hari', 'Masa', 'Aktiviti', 'Nota']], use_container_width=True, hide_index=True)
+            kolum_papar = [c for c in ['Hari', 'Masa', 'Aktiviti', 'Nota'] if c in tentatif_semasa.columns]
+            st.dataframe(tentatif_semasa[kolum_papar], use_container_width=True, hide_index=True)
         else:
             st.info("ℹ️ Jadual tentatif masih kosong untuk aktiviti/trip ini.")
     else:
@@ -93,7 +109,7 @@ except Exception as e:
 st.divider()
 
 
-# --- 3. INTEGRASI BUTANG PINTAR YAHOO WEATHER (DINAMIK) ---
+# --- 3. INTEGRASI BUTANG PINTAR YAHOO WEATHER ---
 st.subheader("🌦️ Ramalan Cuaca Kumpulan")
 if lokasi_kem != default_lokasi:
     lokasi_cuaca = lokasi_kem.split(",")[0].strip()
@@ -115,10 +131,9 @@ if st.session_state["role"] == "Admin":
     
     with tab_lokasi:
         with st.form("form_kemaskini_lokasi"):
-            st.write("💡 *Taip sahaja nama lokasi, sistem akan automatik kesan peta dan jana link Waze/Maps!*")
+            st.write("💡 *Taip sahaja nama lokasi, sistem akan otomatis membuat pautan peta dan menyimpannya!*")
             inp_lokasi = st.text_input("Nama Lokasi Tapak", value=lokasi_kem if lokasi_kem != default_lokasi else "")
             
-            # WIDGET KALENDAR (DATE PICKER)
             col_in, col_out = st.columns(2)
             with col_in:
                 inp_in = st.date_input("Tarikh Check-In", value=parse_tarikh(check_in))
@@ -131,21 +146,28 @@ if st.session_state["role"] == "Admin":
                 if not inp_lokasi:
                     st.warning("Nama lokasi wajib diisi!")
                 else:
+                    # Berikan perlindungan fallback ID_Trip jika session memori terbaca kosong
+                    id_trip_save = current_trip if current_trip else "TRP001"
+                    
+                    # Otomatis membangun URL navigasi berdasarkan teks input lokasi
+                    lokasi_url_save = urllib.parse.quote(inp_lokasi.strip())
+                    auto_maps = f"https://maps.google.com/?q={lokasi_url_save}"
+                    auto_waze = f"https://waze.com/ul?q={lokasi_url_save}"
+                    
                     info_baru = pd.DataFrame([{
-                        "ID_Trip": current_trip,
+                        "ID_Trip": id_trip_save,
                         "Lokasi": inp_lokasi.strip(),
-                        # Tukar balik ke format YYYY-MM-DD untuk simpan dalam GSheet
                         "Check_In": inp_in.strftime("%Y-%m-%d"),
                         "Check_Out": inp_out.strftime("%Y-%m-%d"),
-                        "Maps_URL": "", # Kosongkan sebab sistem auto-jana
-                        "Waze_URL": ""  # Kosongkan sebab sistem auto-jana
+                        "Maps_URL": auto_maps, 
+                        "Waze_URL": auto_waze  
                     }])
                     
                     try:
                         info_pukal = conn.read(worksheet="Info_Kem", ttl=0)
-                        if 'ID_Trip' in info_pukal.columns:
+                        if not info_pukal.empty and 'ID_Trip' in info_pukal.columns:
                             info_pukal['ID_Trip'] = info_pukal['ID_Trip'].astype(str).str.strip()
-                            info_pukal = info_pukal[info_pukal['ID_Trip'] != current_trip]
+                            info_pukal = info_pukal[info_pukal['ID_Trip'] != id_trip_save]
                             updated_info = pd.concat([info_pukal, info_baru], ignore_index=True)
                         else:
                             updated_info = info_baru
@@ -153,7 +175,7 @@ if st.session_state["role"] == "Admin":
                         updated_info = info_baru
                     
                     conn.update(worksheet="Info_Kem", data=updated_info)
-                    st.success("Maklumat lokasi berjaya disimpan ke Google Sheets!")
+                    st.success("Maklumat lokasi dan link navigasi berhasil disimpan ke Google Sheets!")
                     st.cache_data.clear()
                     st.rerun()
                 
@@ -170,8 +192,9 @@ if st.session_state["role"] == "Admin":
                 if not inp_masa or not inp_aktiviti:
                     st.warning("Ruangan Masa dan Nama Aktiviti wajib diisi!")
                 else:
+                    id_trip_save = current_trip if current_trip else "TRP001"
                     akt_baru = pd.DataFrame([{
-                        "ID_Trip": current_trip,
+                        "ID_Trip": id_trip_save,
                         "Hari": inp_hari,
                         "Masa": inp_masa.strip(),
                         "Aktiviti": inp_aktiviti.strip(),
