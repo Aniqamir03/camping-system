@@ -23,7 +23,7 @@ def muat_naik_ke_gdrive(fail_gambar, nama_fail):
     media = MediaIoBaseUpload(file_buffer, mimetype=fail_gambar.type, resumable=True)
 
     # MASUKKAN FOLDER ID GOOGLE DRIVE ANDA DI SINI
-    folder_id = "13vyENRsNFDgJbmcUaQxzLUp2tZS_fjM-?usp=drive_link"
+    folder_id = "13vyENRsNFDgJbmcUaQxzLUp2tZS_fjM-"
 
     file_metadata = {
         'name': nama_fail,
