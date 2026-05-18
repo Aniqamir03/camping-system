@@ -46,5 +46,20 @@ else:
             profil_page
         ])
 
+# 3.5 KAWALAN SIDEBAR & BUTANG LOG OUT (BAHARU)
+if st.session_state["logged_in"]:
+    with st.sidebar:
+        st.write("---") # Garis pemisah antara menu navigasi dan ruangan profil
+        st.write(f"Log masuk sebagai: **{st.session_state['full_name']}**")
+        
+        # Butang log keluar yang akan reset semua memori log masuk
+        if st.button("🚪 Log Keluar", use_container_width=True):
+            st.session_state["logged_in"] = False
+            st.session_state["role"] = None
+            st.session_state["username"] = ""
+            st.session_state["full_name"] = ""
+            st.cache_data.clear() # Cuci data lama
+            st.rerun() # Refresh sistem untuk kembali ke muka depan (Login)
+
 # 4. Jalankan Navigasi
 pg.run()
