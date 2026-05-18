@@ -2,72 +2,66 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
-st.title("🎒 Senarai Semak Peralatan")
-st.write("Senarai barang keperluan logistik untuk Trip Pulau Redang. Sila tanda barang yang anda boleh bawa.")
+st.title("backpack 🎒 Senarai Peralatan & Logistik")
+st.write("Semak senarai barang perkhemahan atau 'Claim' barang yang anda boleh bawa.")
 
-# Sambungan ke GSheet
 conn = st.connection("gsheets", type=GSheetsConnection)
-inv_db = conn.read(worksheet="Inventory", ttl=0)
+inventory_db = conn.read(worksheet="Inventory", ttl=0)
 
-current_user = st.session_state["full_name"]
+# Paksa kolum jadi teks untuk elak error
+for col in ['ID_Barang', 'Nama_Barang', 'Kategori', 'Kuantiti', 'Dibawa_Oleh']:
+    if col in inventory_db.columns:
+        inventory_db[col] = inventory_db[col].astype(str).replace('nan', '')
 
-# Bahagikan paparan kepada dua jadual: Belum Diambil (Pending) & Telah Diambil (Assigned)
-st.subheader("Barang Yang Belum Diagihkan")
-
-# Tapis (filter) barang yang belum ada 'Assigned_To' atau masih kosong
-pending_items = inv_db[inv_db['Assigned_To'].isna() | (inv_db['Assigned_To'] == "")]
-
-if not pending_items.empty:
-    for index, row in pending_items.iterrows():
-        col1, col2, col3 = st.columns([3, 1, 1])
-        with col1:
-            st.write(f"🏕️ **{row['Item_Name']}** (Kuantiti: {row['Quantity']})")
-        with col2:
-            st.write(f"Kategori: {row['Category']}")
-        with col3:
-            # Butang untuk claim barang
-            if st.button(f"Saya Bawa", key=f"claim_{index}"):
-                inv_db.at[index, 'Assigned_To'] = current_user
-                inv_db.at[index, 'Status'] = "Pending" # Status 'Pending' bermaksud belum masuk beg
-                conn.update(worksheet="Inventory", data=inv_db)
-                st.success(f"Anda telah ditugaskan untuk membawa {row['Item_Name']}!")
-                st.cache_data.clear()
-                st.rerun()
+# 1. Paparkan Senarai Barang Semasa
+if not inventory_db.empty:
+    st.dataframe(inventory_db, use_container_width=True, hide_index=True)
 else:
-    st.success("Semua barang kumpulan telah diagihkan!")
+    st.info("Senarai peralatan masih kosong.")
 
 st.divider()
 
-st.subheader("Senarai Tugasan Membawa Barang")
-# Tapis barang yang sudah ada orang bawa
-assigned_items = inv_db[inv_db['Assigned_To'].notna() & (inv_db['Assigned_To'] != "")]
+# 2. Fungsi 'Claim' Barang untuk Ahli yang Log Masuk
+st.subheader("🤝 Claim Barang untuk Dibawa")
+barang_belum_claim = inventory_db[inventory_db['Dibawa_Oleh'] == '']
 
-if not assigned_items.empty:
-    # Paparkan dalam bentuk jadual yang kemas
-    st.dataframe(
-        assigned_items[['Item_Name', 'Quantity', 'Assigned_To', 'Status']], 
-        use_container_width=True,
-        hide_index=True
-    )
-    
-    st.write("---")
-    st.write("📋 **Tugasan Anda:**")
-    
-    # Cari barang yang sedang dilog masuk (current_user) perlu bawa
-    my_items = assigned_items[assigned_items['Assigned_To'] == current_user]
-    
-    if not my_items.empty:
-        for index, row in my_items.iterrows():
-            col_a, col_b = st.columns([4, 1])
-            with col_a:
-                st.write(f"- {row['Item_Name']} ({row['Quantity']})")
-            with col_b:
-                # Fungsi untuk lepaskan (unclaim) barang jika tidak jadi bawa
-                if st.button("Batal", key=f"drop_{index}"):
-                    inv_db.at[index, 'Assigned_To'] = ""
-                    inv_db.at[index, 'Status'] = "Pending"
-                    conn.update(worksheet="Inventory", data=inv_db)
-                    st.cache_data.clear()
-                    st.rerun()
-    else:
-        st.info("Anda belum mengambil apa-apa tugasan barang kumpulan.")
+if not barang_belum_claim.empty:
+    with st.form("borang_claim"):
+        pilihan_barang = st.selectbox("Pilih barang yang anda nak bawa:", barang_belum_claim['Nama_Barang'].tolist())
+        submit_claim = st.form_submit_button("Saya Boleh Bawa Barang Ini!")
+        
+        if submit_claim:
+            idx = inventory_db.index[inventory_db['Nama_Barang'] == pilihan_barang].tolist()[0]
+            inventory_db.at[idx, 'Dibawa_Oleh'] = st.session_state["full_name"]
+            
+            conn.update(worksheet="Inventory", data=inventory_db)
+            st.success(f"Terima kasih! Anda telah claim untuk membawa '{pilihan_barang}'.")
+            st.cache_data.clear()
+            st.rerun()
+else:
+    st.success("🎉 Semua peralatan telah berjaya diclaim oleh ahli kumpulan!")
+
+# 3. Fungsi Tambah Barang Baru (Khas untuk Admin)
+if st.session_state["role"] == "Admin":
+    st.divider()
+    st.subheader("➕ Tambah Barang Baru (Admin Sahaja)")
+    with st.form("borang_tambah_barang"):
+        nama_b = st.text_input("Nama Barang")
+        kat_b = st.selectbox("Kategori", ["Khemah & Tidur", "Memasak & Makanan", "Lampu & Elektrik", "Logistik & Alat", "Lain-lain"])
+        kuantiti_b = st.number_input("Kuantiti/Unit", min_value=1, step=1)
+        submit_b = st.form_submit_button("Tambah ke Senarai")
+        
+        if submit_b and nama_b:
+            id_baru = f"BRG{len(inventory_db) + 1:03d}"
+            barang_baru = pd.DataFrame([{
+                "ID_Barang": id_baru,
+                "Nama_Barang": nama_b,
+                "Kategori": kat_b,
+                "Kuantiti": str(kuantiti_b),
+                "Dibawa_Oleh": ""
+            }])
+            updated_inv = pd.concat([inventory_db, barang_baru], ignore_index=True)
+            conn.update(worksheet="Inventory", data=updated_inv)
+            st.success(f"'{nama_b}' berjaya ditambah!")
+            st.cache_data.clear()
+            st.rerun()
