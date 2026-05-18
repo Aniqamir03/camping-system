@@ -3,6 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import datetime
 import urllib.parse
+import streamlit.components.v1 as components
 
 st.title("📅 Tentatif & Maklumat Lokasi")
 
@@ -48,14 +49,12 @@ try:
             maps_url = default_maps if raw_maps.lower() in ['nan', ''] else raw_maps
             waze_url = default_waze if raw_waze.lower() in ['nan', ''] else raw_waze
             
-            # Tarik 3 pautan URL poster dari GSheets
             p1 = str(info_semasa.iloc[0].get('Poster_Pic_1', '')).strip()
             p2 = str(info_semasa.iloc[0].get('Poster_Pic_2', '')).strip()
             p3 = str(info_semasa.iloc[0].get('Poster_Pic_3', '')).strip()
 except:
     pass
 
-# Auto-Jana URL jika belum ditetapkan oleh Admin
 lokasi_url = urllib.parse.quote(lokasi_kem)
 if maps_url == default_maps and lokasi_kem != default_lokasi:
     maps_url = f"https://maps.google.com/maps?q={lokasi_url}"
@@ -63,7 +62,6 @@ if maps_url == default_maps and lokasi_kem != default_lokasi:
 
 embed_map_url = f"https://maps.google.com/maps?q={lokasi_url}&output=embed"
 
-# Paparkan Maklumat Lokasi Tapak Semasa
 st.subheader("📍 Info Tapak Perkhemahan")
 col1, col2 = st.columns(2)
 
@@ -86,25 +84,107 @@ with col2:
 st.divider()
 
 
-# --- 2. PAPARAN SLIDESHOW POSTER AKTIVITI ---
+# --- 2. PAPARAN SLIDESHOW POSTER AKTIVITI (AUTO & MANUAL) ---
 st.subheader("🗓️ Poster & Jadual Aktiviti Kumpulan")
 
-# Tapis senarai poster untuk membuang yang kosong atau "nan"
 senarai_poster = [p for p in [p1, p2, p3] if p and p.lower() != "nan"]
 
 if len(senarai_poster) > 0:
-    st.write("📸 *Sila klik pada tab di bawah untuk melihat koleksi poster maklumat.*")
+    # Membina kod HTML dan JS dinamik untuk jadikan ia slideshow
+    divs_gambar = ""
+    for img_url in senarai_poster:
+        divs_gambar += f"""
+        <div class="mySlides fade">
+            <img src="{img_url}" style="width:100%; max-height:600px; object-fit:contain; border-radius:10px; background:#2e2e2e;">
+        </div>
+        """
+        
+    html_kod = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+    * {{box-sizing: border-box}}
+    body {{font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: transparent;}}
+    .slideshow-container {{
+      max-width: 800px;
+      position: relative;
+      margin: auto;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+    }}
+    .mySlides {{display: none; text-align: center;}}
+    .prev, .next {{
+      cursor: pointer;
+      position: absolute;
+      top: 50%;
+      width: auto;
+      padding: 16px;
+      margin-top: -22px;
+      color: white;
+      font-weight: bold;
+      font-size: 20px;
+      transition: 0.6s ease;
+      border-radius: 0 3px 3px 0;
+      user-select: none;
+      background-color: rgba(0,0,0,0.4);
+      text-decoration: none;
+    }}
+    .next {{right: 0; border-radius: 3px 0 0 3px;}}
+    .prev:hover, .next:hover {{background-color: rgba(0,0,0,0.9);}}
+    .fade {{
+      animation-name: fade;
+      animation-duration: 1.5s;
+    }}
+    @keyframes fade {{
+      from {{opacity: .4}} 
+      to {{opacity: 1}}
+    }}
+    </style>
+    </head>
+    <body>
+
+    <div class="slideshow-container">
+      {divs_gambar}
+      <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
+      <a class="next" onclick="plusSlides(1)">&#10095;</a>
+    </div>
+
+    <script>
+    let slideIndex = 0;
+    let timer;
+    showSlides();
+
+    function plusSlides(n) {{
+      clearTimeout(timer);
+      showSlides(slideIndex += n);
+    }}
+
+    function showSlides(n) {{
+      let i;
+      let slides = document.getElementsByClassName("mySlides");
+      if (slides.length === 0) return;
+      if (n !== undefined) {{ slideIndex = n; }}
+      if (slideIndex >= slides.length) {{slideIndex = 0}}    
+      if (slideIndex < 0) {{slideIndex = slides.length - 1}}
+      for (i = 0; i < slides.length; i++) {{
+        slides[i].style.display = "none";  
+      }}
+      slides[slideIndex].style.display = "block";  
+      // Auto tukar setiap 5 saat (5000 ms)
+      timer = setTimeout(function(){{ plusSlides(1); }}, 5000);
+    }}
+    </script>
+
+    </body>
+    </html>
+    """
     
-    # Bina Tab Slideshow bergantung kepada bilangan gambar yang dimasukkan
-    tajuk_tab = [f"Poster {i+1}" for i in range(len(senarai_poster))]
-    tabs = st.tabs(tajuk_tab)
+    # Paparkan HTML komponen di dalam Streamlit
+    components.html(html_kod, height=620)
     
-    for idx, tab in enumerate(tabs):
-        with tab:
-            try:
-                st.image(senarai_poster[idx], use_container_width=True, caption=f"Paparan {idx+1} - {lokasi_kem}")
-            except:
-                st.error(f"Gagal memaparkan gambar untuk Poster {idx+1}. Sila semak pautan URL.")
 else:
     st.info("ℹ️ Belum ada poster jadual aktiviti untuk trip ini. Admin akan kemaskini sebentar lagi.")
 
@@ -231,7 +311,6 @@ if st.session_state["role"] == "Admin":
                             for col in info_pukal.columns:
                                 info_pukal[col] = info_pukal[col].astype(str).replace('nan', '').str.strip()
                         
-                        # Pastikan 3 kolum poster ini wujud dalam memori DataFrame
                         for col_name in ['Poster_Pic_1', 'Poster_Pic_2', 'Poster_Pic_3']:
                             if col_name not in info_pukal.columns:
                                 info_pukal[col_name] = ""
