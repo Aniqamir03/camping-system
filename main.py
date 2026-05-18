@@ -1,4 +1,6 @@
 import streamlit as st
+from streamlit_gsheets import GSheetsConnection
+import pandas as pd
 
 st.set_page_config(page_title="Sistem Perkhemahan", layout="wide")
 
@@ -10,7 +12,6 @@ if "logged_in" not in st.session_state:
     st.session_state["full_name"] = ""
 
 # 2. Daftarkan SEMUA Muka Surat (Pages) dari folder 'views'
-# (Pastikan nama fail dalam folder 'views' sama sebiji macam di bawah)
 login_page = st.Page("views/login.py", title="Log Masuk", icon="🔐")
 dashboard_page = st.Page("views/dashboard.py", title="Dashboard", icon="🏕️")
 tentatif_page = st.Page("views/tentatif.py", title="Tentatif & Lokasi", icon="📅")
@@ -19,7 +20,6 @@ inventory_page = st.Page("views/inventory.py", title="Peralatan", icon="🎒")
 kewangan_page = st.Page("views/kewangan.py", title="Kewangan", icon="💰")
 profil_page = st.Page("views/profil.py", title="Profil Saya", icon="👤")
 admin_page = st.Page("views/admin.py", title="Urus Ahli", icon="⚙️")
-senarai_trip = conn.read(worksheet="Senarai_Trip", ttl=0)
 
 # 3. Kawalan Navigasi (Routing Logic)
 if not st.session_state["logged_in"]:
@@ -47,27 +47,37 @@ else:
             profil_page
         ])
 
-# 3.5 KAWALAN SIDEBAR & BUTANG LOG OUT (BAHARU)
+# 3.5 KAWALAN SIDEBAR (PILIHAN TRIP & BUTANG LOG OUT)
 if st.session_state["logged_in"]:
     with st.sidebar:
-        st.write("---") # Garis pemisah antara menu navigasi dan ruangan profil
+        st.write("---")
         st.write(f"Log masuk sebagai: **{st.session_state['full_name']}**")
         st.write("🌍 **Pilih Aktiviti / Trip:**")
-    # Pengguna pilih trip dari dropdown
-    pilihan_trip = st.selectbox("Sila Pilih:", senarai_trip['Nama_Trip'].tolist())
-    
-    # Dapatkan ID_Trip berdasarkan nama yang dipilih dan simpan dalam memori
-    id_terpilih = senarai_trip[senarai_trip['Nama_Trip'] == pilihan_trip]['ID_Trip'].values[0]
-    st.session_state['current_trip_id'] = id_terpilih
         
-        # Butang log keluar yang akan reset semua memori log masuk
+        # Tarik data Senarai Trip dari GSheet secara berhati-hati
+        try:
+            conn = st.connection("gsheets", type=GSheetsConnection)
+            senarai_trip = conn.read(worksheet="Senarai_Trip", ttl=0)
+            
+            # Pengguna pilih trip dari dropdown
+            pilihan_trip = st.selectbox("Sila Pilih:", senarai_trip['Nama_Trip'].tolist(), label_visibility="collapsed")
+            
+            # Dapatkan ID_Trip berdasarkan nama yang dipilih dan simpan dalam memori
+            id_terpilih = senarai_trip[senarai_trip['Nama_Trip'] == pilihan_trip]['ID_Trip'].values[0]
+            st.session_state['current_trip_id'] = id_terpilih
+            
+        except Exception as e:
+            st.warning("⚠️ Sila cipta tab 'Senarai_Trip' di Google Sheets terlebih dahulu!")
+        
+        st.write("---")
+        # Butang log keluar
         if st.button("🚪 Log Keluar", use_container_width=True):
             st.session_state["logged_in"] = False
             st.session_state["role"] = None
             st.session_state["username"] = ""
             st.session_state["full_name"] = ""
-            st.cache_data.clear() # Cuci data lama
-            st.rerun() # Refresh sistem untuk kembali ke muka depan (Login)
+            st.cache_data.clear()
+            st.rerun()
 
 # 4. Jalankan Navigasi
 pg.run()
