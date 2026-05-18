@@ -1,57 +1,30 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
+from PIL import Image
+import base64
 import io
 
 st.title("👤 Profil Saya")
 
-# --- FUNGSI UPLOAD KE GOOGLE DRIVE ---
-def muat_naik_ke_gdrive(fail_gambar, nama_fail):
-    # Ambil kunci dari st.secrets GSheets yang sedia ada
-    secret_dict = dict(st.secrets["connections"]["gsheets"])
+# --- FUNGSI PROSES GAMBAR KEPADA BASE64 ---
+def proses_gambar_ke_base64(fail_gambar):
+    # Buka gambar menggunakan Pillow
+    img = Image.open(fail_gambar)
     
-    # Skop akses penuh untuk manipulasi fail yang dicipta
-    creds = service_account.Credentials.from_service_account_info(
-        secret_dict,
-        scopes=['https://www.googleapis.com/auth/drive']
-    )
-    service = build('drive', 'v3', credentials=creds)
-
-    # Sediakan fail buffer
-    file_buffer = io.BytesIO(fail_gambar.getvalue())
+    # Auto-resize gambar kepada maksimum 150x150 pixel supaya muat elok dalam GSheet
+    img.thumbnail((150, 150))
     
-    # Ditukar resumable=False untuk fail kecil (gambar) bagi mengelakkan HttpError/ResumableUploadError
-    media = MediaIoBaseUpload(file_buffer, mimetype=fail_gambar.type, resumable=False)
-
-    folder_id = "13vyENRsNFDgJbmcUaQxzLUp2tZS_fjM-"
-
-    file_metadata = {
-        'name': nama_fail,
-        'parents': [folder_id]
-    }
-
-    # PEMBETULAN UTAMA: Menghantar metadata bersama media_body dengan betul
-    fail_diupload = service.files().create(
-        body=file_metadata,
-        media_body=media,
-        fields='id, webViewLink'
-    ).execute()
-
-    fail_id = fail_diupload.get('id')
-
-    # Tukar permission folder/fail supaya boleh diakses sebagai 'reader' oleh sesiapa sahaja (Public Link)
-    service.permissions().create(
-        fileId=fail_id,
-        body={'type': 'anyone', 'role': 'reader'}
-    ).execute()
-
-    # Trik menukar link menjadi Direct Download Link supaya st.image boleh baca dan paparkan gambar terus
-    direct_link = f"https://drive.google.com/uc?export=view&id={fail_id}"
-    return direct_link
-# -------------------------------------
+    # Tukar imej kepada format Bytes
+    buffer = io.BytesIO()
+    if img.mode in ("RGBA", "P"):
+        img = img.convert("RGB")
+    img.save(buffer, format="JPEG", quality=80) # Sederhanakan kualiti untuk jimat saiz
+    
+    # Tukar bytes menjadi teks string Base64
+    img_str = base64.b64encode(buffer.getvalue()).decode()
+    return f"data:image/jpeg;base64,{img_str}"
+# ------------------------------------------
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 users_db = conn.read(worksheet="Users", ttl=0)
@@ -68,17 +41,17 @@ user_data = users_db.loc[user_index]
 st.write(f"Kemaskini maklumat peribadi anda, **{user_data['Full_Name']}**.")
 
 with st.form("update_profil_form"):
-    # Paparkan gambar profil jika ada
+    # Paparkan gambar profil jika ada kod Base64 tersimpan
     pic_url = user_data['Profile_Pic_URL']
-    if pd.notna(pic_url) and pic_url != "":
+    if pd.notna(pic_url) and pic_url.startswith("data:image"):
         try:
             st.image(pic_url, width=150)
         except:
-            st.warning("Gambar profil tidak dapat dipaparkan atau pautan tamat tempoh.")
+            st.warning("Gambar profil tidak dapat dipaparkan.")
     else:
         st.info("Tiada gambar profil.")
 
-    # Butang muat naik fail
+    # Butang muat naik fail dari telefon atau komputer
     gambar_baru = st.file_uploader("📸 Muat Naik Gambar Profil Baru", type=['jpg', 'jpeg', 'png'])
 
     new_phone = st.text_input("No. Telefon", value=user_data['Phone_No'])
@@ -88,20 +61,20 @@ with st.form("update_profil_form"):
     
     if update_btn:
         if gambar_baru is not None:
-            with st.spinner("Sedang memuat naik gambar ke Google Drive..."):
-                nama_fail = f"profil_{current_user}_{gambar_baru.name}"
+            with st.spinner("Sedang memproses dan menyimpan gambar profil..."):
                 try:
-                    link_gambar_baru = muat_naik_ke_gdrive(gambar_baru, nama_fail)
-                    users_db.at[user_index, 'Profile_Pic_URL'] = str(link_gambar_baru)
+                    # Tukar imej kepada teks kod dan masukkan ke database
+                    kod_gambar_base64 = proses_gambar_ke_base64(gambar_baru)
+                    users_db.at[user_index, 'Profile_Pic_URL'] = kod_gambar_base64
                 except Exception as e:
-                    st.error(f"Gagal memuat naik gambar: {e}")
+                    st.error(f"Gagal memproses gambar: {e}")
                     st.stop()
 
         # Kemaskini maklumat lain
         users_db.at[user_index, 'Phone_No'] = str(new_phone).strip()
         users_db.at[user_index, 'Emergency_Contact'] = str(new_emergency).strip()
         
-        # Hantar DataFrame yang telah dikemaskini ke Google Sheets
+        # Hantar DataFrame yang telah dikemaskini terus ke Google Sheets
         conn.update(worksheet="Users", data=users_db)
         
         st.success("Profil berjaya dikemaskini!")
