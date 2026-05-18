@@ -3,9 +3,9 @@ from streamlit_gsheets import GSheetsConnection
 
 st.title("Log Masuk Sistem")
 
-# Sambungan ke GSheet (Pastikan secrets dah disetup)
+# ttl=0 bermaksud sistem akan sentiasa ambil data terkini (Live) dari GSheet
 conn = st.connection("gsheets", type=GSheetsConnection)
-users_db = conn.read(worksheet="Users", ttl="10m")
+users_db = conn.read(worksheet="Users", ttl=0)
 
 with st.form("login_form"):
     input_user = st.text_input("Username")
@@ -13,8 +13,11 @@ with st.form("login_form"):
     submit = st.form_submit_button("Log Masuk")
     
     if submit:
-        # Semak padanan dengan GSheet
-        match = users_db[(users_db['Username'] == input_user) & (users_db['Password'] == input_pass)]
+        # Kita tambah .astype(str) supaya tak ada lagi isu nombor (123456) tak sama dengan teks ("123456")
+        match = users_db[
+            (users_db['Username'].astype(str) == str(input_user)) & 
+            (users_db['Password'].astype(str) == str(input_pass))
+        ]
         
         if not match.empty:
             st.session_state["logged_in"] = True
