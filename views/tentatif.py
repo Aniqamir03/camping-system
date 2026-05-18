@@ -124,75 +124,26 @@ if st.session_state["role"] == "Admin":
     st.divider()
     st.subheader("⚙️ Panel Pengurusan Tentatif & Lokasi (Admin Sahaja)")
     
-    # KITA BUAT 3 TAB: Kemaskini Lokasi Semasa, Daftar Trip Baharu, dan Tambah Jadual
-    tab_lokasi, tab_trip_baru, tab_aktiviti = st.tabs([
-        "📍 Urus Lokasi Semasa", 
-        "✨ Daftar Trip Baharu", 
+    # KITA BUANG TAB KEMASKINI LOKASI - HANYA TINGGAL DAFTAR TRIP DAN TAMBAH JADUAL
+    tab_trip_baru, tab_aktiviti = st.tabs([
+        "✨ Daftar Trip & Lokasi Baharu", 
         "➕ Tambah Aktiviti Jadual"
     ])
-    
-    # TAB 1: KEMASKINI LOKASI UNTUK TRIP YANG SEDANG DIPILIH
-    with tab_lokasi:
-        with st.form("form_kemaskini_lokasi"):
-            st.write(f"Mengemaskini maklumat lokasi untuk Trip ID Aktif: **{current_trip if current_trip else 'TRP001'}**")
-            inp_lokasi = st.text_input("Nama Lokasi Tapak", value=lokasi_kem if lokasi_kem != default_lokasi else "")
-            
-            col_in, col_out = st.columns(2)
-            with col_in:
-                inp_in = st.date_input("Tarikh Check-In", value=parse_tarikh(check_in), key="edit_in")
-            with col_out:
-                inp_out = st.date_input("Tarikh Check-Out", value=parse_tarikh(check_out), key="edit_out")
-            
-            submit_lokasi = st.form_submit_button("Simpan & Kemaskini Info Lokasi")
-            
-            if submit_lokasi:
-                if not inp_lokasi:
-                    st.warning("Nama lokasi wajib diisi!")
-                else:
-                    id_trip_save = current_trip if current_trip else "TRP001"
-                    lokasi_url_save = urllib.parse.quote(inp_lokasi.strip())
-                    auto_maps = f"https://maps.google.com/maps?q={lokasi_url_save}"
-                    auto_waze = f"https://waze.com/ul?q={lokasi_url_save}"
                     
-                    info_baru = pd.DataFrame([{
-                        "ID_Trip": id_trip_save,
-                        "Locations": inp_lokasi.strip(),
-                        "Check_In": inp_in.strftime("%Y-%m-%d"),
-                        "Check_Out": inp_out.strftime("%Y-%m-%d"),
-                        "Maps_URL": auto_maps, 
-                        "Waze_URL": auto_waze  
-                    }])
-                    
-                    try:
-                        info_pukal = conn.read(worksheet="Info_Kem", ttl=0)
-                        if not info_pukal.empty and 'ID_Trip' in info_pukal.columns:
-                            info_pukal['ID_Trip'] = info_pukal['ID_Trip'].astype(str).str.strip()
-                            info_pukal = info_pukal[info_pukal['ID_Trip'] != id_trip_save]
-                            updated_info = pd.concat([info_pukal, info_baru], ignore_index=True)
-                        else:
-                            updated_info = info_baru
-                    except:
-                        updated_info = info_baru
-                    
-                    conn.update(worksheet="Info_Kem", data=updated_info)
-                    st.success("Maklumat lokasi berjaya dikemaskini!")
-                    st.cache_data.clear()
-                    st.rerun()
-                    
-    # TAB 2: BORANG MAGIK UNTUK DAFTAR TRIP + LOKASI + TARIKH SERENTAK (BARU)
+    # TAB 1: BORANG MAGIK UNTUK DAFTAR TRIP + LOKASI + TARIKH SERENTAK 
     with tab_trip_baru:
         with st.form("form_daftar_trip_dan_lokasi"):
             st.write("### 🆕 Pendaftaran Aktiviti & Lokasi Baharu")
-            st.write("Sistem akan auto-jana ID Trip dan menetapkan link navigasi peta secara automatik.")
+            st.write("Isi maklumat di bawah. Sistem akan auto-jana ID Trip, auto-link navigasi peta, dan menyelaraskan (sync) ke semua database berkaitan serentak.")
             
             new_nama_trip = st.text_input("Nama Aktiviti Baru (Contoh: Camping Janda Baik 2026)")
             new_lokasi = st.text_input("Nama Lokasi Tapak (Contoh: Riverside Camp, Pahang)")
             
             col_new_in, col_new_out = st.columns(2)
             with col_new_in:
-                new_in = st.date_input("Tarikh Check-In / Mula", value=datetime.date.today(), key="new_in")
+                new_in = st.date_input("Tarikh Check-In / Bertolak", value=datetime.date.today(), key="new_in")
             with col_new_out:
-                new_out = st.date_input("Tarikh Check-Out / Tamat", value=datetime.date.today(), key="new_out")
+                new_out = st.date_input("Tarikh Check-Out / Pulang", value=datetime.date.today(), key="new_out")
                 
             submit_trip_baru = st.form_submit_button("🚀 Daftarkan Trip & Lokasi Serta-merta")
             
@@ -233,7 +184,7 @@ if st.session_state["role"] == "Admin":
                         "Waze_URL": auto_waze_new
                     }])
                     
-                    # 4. Gabung & Simpan terus ke fail Google Sheets
+                    # 4. Gabung & Simpan terus ke fail Google Sheets (SYNC SERENTAK)
                     try:
                         updated_trip_db = pd.concat([db_trip_pukal, trip_row], ignore_index=True)
                     except:
@@ -248,11 +199,11 @@ if st.session_state["role"] == "Admin":
                     conn.update(worksheet="Senarai_Trip", data=updated_trip_db)
                     conn.update(worksheet="Info_Kem", data=updated_info_db)
                     
-                    st.success(f"Berjaya mendaftarkan trip **{new_nama_trip}** dengan kod keselamatan **{next_id}**!")
+                    st.success(f"Mantap! Trip **{new_nama_trip}** berjaya direkodkan dengan kod **{next_id}** dan diselaraskan ke semua pangkalan data.")
                     st.cache_data.clear()
                     st.rerun()
                 
-    # TAB 3: TAMBAH AKTIVITI JADUAL TENTATIF
+    # TAB 2: TAMBAH AKTIVITI JADUAL TENTATIF
     with tab_aktiviti:
         with st.form("form_tambah_aktiviti"):
             inp_hari = st.selectbox("Pilih Hari:", ["Hari 1 (Jumaat)", "Hari 2 (Sabtu)", "Hari 3 (Ahad)", "Lain-lain"])
@@ -282,6 +233,6 @@ if st.session_state["role"] == "Admin":
                         updated_tentatif = akt_baru
                         
                     conn.update(worksheet="Tentatif", data=updated_tentatif)
-                    st.success(f"Agenda '{inp_aktiviti}' berjaya ditambah!")
+                    st.success(f"Agenda '{inp_aktiviti}' berjaya ditambah ke dalam jadual!")
                     st.cache_data.clear()
                     st.rerun()
