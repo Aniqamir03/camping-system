@@ -102,11 +102,11 @@ st.divider()
 st.subheader("🗓️ Poster Jadual Aktiviti Kumpulan")
 if pd.notna(poster_pic) and poster_pic.startswith("data:image"):
     try:
-        st.image(poster_pic, use_container_width=True, caption=f"Poster Resmi Aktivitas - {lokasi_kem}")
+        st.image(poster_pic, use_container_width=True, caption=f"Poster Rasmi Aktiviti - {lokasi_kem}")
     except:
-        st.error("Gagal menampilkan gambar poster aktivitas.")
+        st.error("Gagal memaparkan gambar poster aktiviti.")
 else:
-    st.info("ℹ️ Belum ada poster jadual aktivitas yang diunggah untuk trip ini oleh Admin.")
+    st.info("ℹ️ Belum ada poster jadual aktiviti yang dimuat naik untuk trip ini oleh Admin.")
 
 st.divider()
 
@@ -131,7 +131,7 @@ if st.session_state["role"] == "Admin":
     
     tab_trip_baru, tab_poster = st.tabs([
         "✨ Daftar Trip & Lokasi Baharu", 
-        "🖼️ Urus Poster Aktivitas"
+        "🖼️ Urus Poster Aktiviti"
     ])
                     
     # TAB 1: BORANG MAGIK UNTUK DAFTAR TRIP + LOKASI + TARIKH SERENTAK 
@@ -146,7 +146,7 @@ if st.session_state["role"] == "Admin":
             col_new_in, col_new_out = st.columns(2)
             with col_new_in:
                 new_in = st.date_input("Tarikh Check-In / Bertolak", value=datetime.date.today(), key="new_in")
-            with col_out:
+            with col_new_out: # <--- TYPO TELAH DIBETULKAN DI SINI (col_new_out)
                 new_out = st.date_input("Tarikh Check-Out / Pulang", value=datetime.date.today(), key="new_out")
                 
             submit_trip_baru = st.form_submit_button("🚀 Daftarkan Trip & Lokasi Serta-merta")
@@ -204,12 +204,12 @@ if st.session_state["role"] == "Admin":
                     st.cache_data.clear()
                     st.rerun()
                 
-    # TAB 2: UNGGAH POSTER AKTIVITI KHAS UNTUK ADMIN
+    # TAB 2: MUAT NAIK POSTER AKTIVITI KHAS UNTUK ADMIN
     with tab_poster:
         with st.form("form_unggah_poster"):
             id_trip_save = current_trip if current_trip else "TRP001"
-            st.write(f"🖼️ **Unggah Gambar Poster** untuk Trip ID Aktif: **{id_trip_save}**")
-            st.write("💡 *Poster yang diunggah akan menggantikan tabel jadwal lama dan langsung disinkronisasikan ke database.*")
+            st.write(f"🖼️ **Muat Naik Gambar Poster** untuk Trip ID Aktif: **{id_trip_save}**")
+            st.write("💡 *Poster yang dimuat naik akan terus dipaparkan kepada semua ahli kumpulan.*")
             
             file_poster = st.file_uploader("📸 Pilih Fail Gambar Poster (JPG/JPEG/PNG)", type=['jpg', 'jpeg', 'png'])
             submit_poster = st.form_submit_button("Simpan & Kemaskini Poster")
@@ -247,10 +247,10 @@ if st.session_state["role"] == "Admin":
                             
                             # Perbarui lembar kerja GSheets secara massal
                             conn.update(worksheet="Info_Kem", data=info_pukal)
-                            st.success("Poster aktivitas berhasil disimpan dan disinkronisasikan ke Google Sheets!")
+                            st.success("Poster aktiviti berjaya disimpan dan diselaraskan ke Google Sheets!")
                             st.cache_data.clear()
                             st.rerun()
                         except Exception as e:
                             st.error(f"Gagal memproses gambar poster: {e}")
                 else:
-                    st.warning("Silakan pilih file gambar poster terlebih dahulu!")
+                    st.warning("Sila pilih fail gambar poster terlebih dahulu!")
