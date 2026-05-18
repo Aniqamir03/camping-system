@@ -1,6 +1,7 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
+from utils import hantar_telegram_alert
 
 st.title("backpack 🎒 Senarai Peralatan & Logistik")
 st.write("Semak senarai barang perkhemahan atau 'Claim' barang yang anda boleh bawa.")
@@ -35,6 +36,7 @@ if not barang_belum_claim.empty:
             inventory_db.at[idx, 'Dibawa_Oleh'] = st.session_state["full_name"]
             
             conn.update(worksheet="Inventory", data=inventory_db)
+            hantar_telegram_alert(f"📢 *LOGISTIK UPDATE!*\n\n*{st.session_state['full_name']}* baru sahaja claim untuk membawa barang: *{pilihan_barang}* 🎒.")
             st.success(f"Terima kasih! Anda telah claim untuk membawa '{pilihan_barang}'.")
             st.cache_data.clear()
             st.rerun()
