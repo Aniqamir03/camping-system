@@ -36,10 +36,9 @@ with tab1:
     st.write("### 👥 Senarai Maklumat Penuh")
     
     if not users_db.empty:
-        papar_df = users_db.copy()
-        # Buat penanda sama ada user dah upload gambar profil atau belum
-        if 'Profile_Pic_URL' in papar_df.columns:
-            papar_df['Gambar Profil'] = papar_df['Profile_Pic_URL'].apply(lambda x: "✅ Ada" if x.startswith("data:image") else "❌ Tiada")
+        papar_df['Gambar Profil'] = papar_df['Profile_Pic_URL'].apply(
+    lambda x: "✅ Ada" if str(x).startswith("data:image") else "❌ Tiada"
+)
         
         # Susun kolum yang mahu dipaparkan sahaja (Sembunyikan password & kod base64 panjang)
         kolum_pilihan = ['User_ID', 'Username', 'Full_Name', 'Role', 'Phone_No', 'Emergency_Contact', 'Gambar Profil']
