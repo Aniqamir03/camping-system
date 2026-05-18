@@ -3,6 +3,9 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import datetime
 import urllib.parse
+from PIL import Image
+import base64
+import io
 
 st.title("📅 Tentatif & Maklumat Lokasi")
 
@@ -11,6 +14,17 @@ current_trip = st.session_state.get('current_trip_id', '')
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
+# --- FUNGSI PROSES POSTER KEPADA BASE64 ---
+def proses_poster_ke_base64(fail_gambar):
+    img = Image.open(fail_gambar)
+    img.thumbnail((800, 1200))  # Batasan resolusi optimal untuk poster di web
+    buffer = io.BytesIO()
+    if img.mode in ("RGBA", "P"):
+        img = img.convert("RGB")
+    img.save(buffer, format="JPEG", quality=85)
+    img_str = base64.b64encode(buffer.getvalue()).decode()
+    return f"data:image/jpeg;base64,{img_str}"
+
 # --- FUNGSI BANTUAN UNTUK KALENDAR ---
 def parse_tarikh(tarikh_str):
     try:
@@ -18,7 +32,7 @@ def parse_tarikh(tarikh_str):
     except:
         return datetime.date.today()
 
-# --- 1. PENGURUSAN DATA INFO LOKASI (DINAMIK) ---
+# --- 1. PENGURUSAN DATA INFO LOKASI & POSTER (DINAMIK) ---
 default_lokasi = "Belum Ditetapkan (Sila isi di Panel Admin)"
 default_in = str(datetime.date.today())
 default_out = str(datetime.date.today())
@@ -26,6 +40,7 @@ default_maps = "https://maps.google.com"
 default_waze = "https://waze.com"
 
 lokasi_kem, check_in, check_out, maps_url, waze_url = default_lokasi, default_in, default_out, default_maps, default_waze
+poster_pic = ""
 
 try:
     info_db = conn.read(worksheet="Info_Kem", ttl=0)
@@ -46,6 +61,9 @@ try:
             
             maps_url = default_maps if raw_maps.lower() in ['nan', ''] else raw_maps
             waze_url = default_waze if raw_waze.lower() in ['nan', ''] else raw_waze
+            
+            # Tarik data poster string Base64 dari GSheets
+            poster_pic = str(info_semasa.iloc[0].get('Poster_Pic', '')).strip()
 except:
     pass
 
@@ -80,28 +98,15 @@ with col2:
 st.divider()
 
 
-# --- 2. JADUAL AKTIVITI (TENTATIF DITAPIS) ---
-st.subheader("🗓️ Jadual Aktiviti Kumpulan")
-try:
-    tentatif_db = conn.read(worksheet="Tentatif", ttl=0)
-    if not tentatif_db.empty:
-        for col in tentatif_db.columns:
-            tentatif_db[col] = tentatif_db[col].astype(str).replace('nan', '').str.strip()
-            
-        if current_trip and 'ID_Trip' in tentatif_db.columns:
-            tentatif_semasa = tentatif_db[tentatif_db['ID_Trip'] == current_trip].copy()
-        else:
-            tentatif_semasa = tentatif_db.copy()
-                
-        if not tentatif_semasa.empty:
-            kolum_papar = [c for c in ['Hari', 'Masa', 'Aktiviti', 'Nota'] if c in tentatif_semasa.columns]
-            st.dataframe(tentatif_semasa[kolum_papar], use_container_width=True, hide_index=True)
-        else:
-            st.info("ℹ️ Jadual tentatif masih kosong untuk aktiviti/trip ini.")
-    else:
-        st.info("Jadual tentatif masih kosong.")
-except Exception as e:
-    st.error(f"Gagal memuatkan data tentatif: {e}")
+# --- 2. PAPARAN POSTER AKTIVITI (MENGGANTIKAN JADUAL TABULAR) ---
+st.subheader("🗓️ Poster Jadual Aktiviti Kumpulan")
+if pd.notna(poster_pic) and poster_pic.startswith("data:image"):
+    try:
+        st.image(poster_pic, use_container_width=True, caption=f"Poster Resmi Aktivitas - {lokasi_kem}")
+    except:
+        st.error("Gagal menampilkan gambar poster aktivitas.")
+else:
+    st.info("ℹ️ Belum ada poster jadual aktivitas yang diunggah untuk trip ini oleh Admin.")
 
 st.divider()
 
@@ -124,10 +129,9 @@ if st.session_state["role"] == "Admin":
     st.divider()
     st.subheader("⚙️ Panel Pengurusan Tentatif & Lokasi (Admin Sahaja)")
     
-    # KITA BUANG TAB KEMASKINI LOKASI - HANYA TINGGAL DAFTAR TRIP DAN TAMBAH JADUAL
-    tab_trip_baru, tab_aktiviti = st.tabs([
+    tab_trip_baru, tab_poster = st.tabs([
         "✨ Daftar Trip & Lokasi Baharu", 
-        "➕ Tambah Aktiviti Jadual"
+        "🖼️ Urus Poster Aktivitas"
     ])
                     
     # TAB 1: BORANG MAGIK UNTUK DAFTAR TRIP + LOKASI + TARIKH SERENTAK 
@@ -142,7 +146,7 @@ if st.session_state["role"] == "Admin":
             col_new_in, col_new_out = st.columns(2)
             with col_new_in:
                 new_in = st.date_input("Tarikh Check-In / Bertolak", value=datetime.date.today(), key="new_in")
-            with col_new_out:
+            with col_out:
                 new_out = st.date_input("Tarikh Check-Out / Pulang", value=datetime.date.today(), key="new_out")
                 
             submit_trip_baru = st.form_submit_button("🚀 Daftarkan Trip & Lokasi Serta-merta")
@@ -151,7 +155,6 @@ if st.session_state["role"] == "Admin":
                 if not new_nama_trip or not new_lokasi:
                     st.warning("Nama Aktiviti dan Nama Lokasi wajib diisi!")
                 else:
-                    # 1. Kira & Auto-Generate ID_Trip baru dari tab Senarai_Trip
                     try:
                         db_trip_pukal = conn.read(worksheet="Senarai_Trip", ttl=0)
                         if not db_trip_pukal.empty:
@@ -162,7 +165,6 @@ if st.session_state["role"] == "Admin":
                         db_trip_pukal = pd.DataFrame(columns=["ID_Trip", "Nama_Trip", "Tarikh", "Status_Trip"])
                         next_id = "TRP001"
                         
-                    # 2. Bina baris data untuk tab Senarai_Trip
                     trip_row = pd.DataFrame([{
                         "ID_Trip": next_id,
                         "Nama_Trip": new_nama_trip.strip(),
@@ -170,7 +172,6 @@ if st.session_state["role"] == "Admin":
                         "Status_Trip": "Aktif"
                     }])
                     
-                    # 3. Bina baris data untuk tab Info_Kem (Auto-link navigasi peta)
                     lokasi_url_new = urllib.parse.quote(new_lokasi.strip())
                     auto_maps_new = f"https://maps.google.com/maps?q={lokasi_url_new}"
                     auto_waze_new = f"https://waze.com/ul?q={lokasi_url_new}"
@@ -181,10 +182,10 @@ if st.session_state["role"] == "Admin":
                         "Check_In": new_in.strftime("%Y-%m-%d"),
                         "Check_Out": new_out.strftime("%Y-%m-%d"),
                         "Maps_URL": auto_maps_new,
-                        "Waze_URL": auto_waze_new
+                        "Waze_URL": auto_waze_new,
+                        "Poster_Pic": ""
                     }])
                     
-                    # 4. Gabung & Simpan terus ke fail Google Sheets (SYNC SERENTAK)
                     try:
                         updated_trip_db = pd.concat([db_trip_pukal, trip_row], ignore_index=True)
                     except:
@@ -199,40 +200,57 @@ if st.session_state["role"] == "Admin":
                     conn.update(worksheet="Senarai_Trip", data=updated_trip_db)
                     conn.update(worksheet="Info_Kem", data=updated_info_db)
                     
-                    st.success(f"Mantap! Trip **{new_nama_trip}** berjaya direkodkan dengan kod **{next_id}** dan diselaraskan ke semua pangkalan data.")
+                    st.success(f"Mantap! Trip **{new_nama_trip}** berjaya direkodkan dengan kod **{next_id}**.")
                     st.cache_data.clear()
                     st.rerun()
                 
-    # TAB 2: TAMBAH AKTIVITI JADUAL TENTATIF
-    with tab_aktiviti:
-        with st.form("form_tambah_aktiviti"):
-            inp_hari = st.selectbox("Pilih Hari:", ["Hari 1 (Jumaat)", "Hari 2 (Sabtu)", "Hari 3 (Ahad)", "Lain-lain"])
-            inp_masa = st.text_input("Masa Aktiviti (Contoh: 08:30 AM)")
-            inp_aktiviti = st.text_input("Nama Aktiviti / Agenda")
-            inp_nota = st.text_input("Nota Tambahan")
+    # TAB 2: UNGGAH POSTER AKTIVITI KHAS UNTUK ADMIN
+    with tab_poster:
+        with st.form("form_unggah_poster"):
+            id_trip_save = current_trip if current_trip else "TRP001"
+            st.write(f"🖼️ **Unggah Gambar Poster** untuk Trip ID Aktif: **{id_trip_save}**")
+            st.write("💡 *Poster yang diunggah akan menggantikan tabel jadwal lama dan langsung disinkronisasikan ke database.*")
             
-            submit_akt = st.form_submit_button("Masukkan ke Jadual Tentatif")
+            file_poster = st.file_uploader("📸 Pilih Fail Gambar Poster (JPG/JPEG/PNG)", type=['jpg', 'jpeg', 'png'])
+            submit_poster = st.form_submit_button("Simpan & Kemaskini Poster")
             
-            if submit_akt:
-                if not inp_masa or not inp_aktiviti:
-                    st.warning("Ruangan Masa dan Nama Aktiviti wajib diisi!")
+            if submit_poster:
+                if file_poster is not None:
+                    with st.spinner("Sedang memproses dan menyimpan gambar poster ke pangkalan data..."):
+                        try:
+                            # Konversi file gambar menjadi string Base64
+                            kod_base64 = proses_poster_ke_base64(file_poster)
+                            info_pukal = conn.read(worksheet="Info_Kem", ttl=0)
+                            
+                            # Seragamkan tipe data menjadi string untuk menghindari ralat NaN
+                            for col in info_pukal.columns:
+                                info_pukal[col] = info_pukal[col].astype(str).replace('nan', '').str.strip()
+                            
+                            if 'Poster_Pic' not in info_pukal.columns:
+                                info_pukal['Poster_Pic'] = ""
+                            
+                            # Periksa apakah data Trip ID saat ini sudah ada di tab Info_Kem
+                            if id_trip_save in info_pukal['ID_Trip'].values:
+                                idx = info_pukal.index[info_pukal['ID_Trip'] == id_trip_save][0]
+                                info_pukal.at[idx, 'Poster_Pic'] = kod_base64
+                            else:
+                                new_row = pd.DataFrame([{
+                                    "ID_Trip": id_trip_save,
+                                    "Lokasi": default_lokasi,
+                                    "Check_In": default_in,
+                                    "Check_Out": default_out,
+                                    "Maps_URL": default_maps,
+                                    "Waze_URL": default_waze,
+                                    "Poster_Pic": kod_base64
+                                }])
+                                info_pukal = pd.concat([info_pukal, new_row], ignore_index=True)
+                            
+                            # Perbarui lembar kerja GSheets secara massal
+                            conn.update(worksheet="Info_Kem", data=info_pukal)
+                            st.success("Poster aktivitas berhasil disimpan dan disinkronisasikan ke Google Sheets!")
+                            st.cache_data.clear()
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Gagal memproses gambar poster: {e}")
                 else:
-                    id_trip_save = current_trip if current_trip else "TRP001"
-                    akt_baru = pd.DataFrame([{
-                        "ID_Trip": id_trip_save,
-                        "Hari": inp_hari,
-                        "Masa": inp_masa.strip(),
-                        "Aktiviti": inp_aktiviti.strip(),
-                        "Nota": inp_nota.strip()
-                    }])
-                    
-                    try:
-                        tentatif_pukal = conn.read(worksheet="Tentatif", ttl=0)
-                        updated_tentatif = pd.concat([tentatif_pukal, akt_baru], ignore_index=True)
-                    except:
-                        updated_tentatif = akt_baru
-                        
-                    conn.update(worksheet="Tentatif", data=updated_tentatif)
-                    st.success(f"Agenda '{inp_aktiviti}' berjaya ditambah ke dalam jadual!")
-                    st.cache_data.clear()
-                    st.rerun()
+                    st.warning("Silakan pilih file gambar poster terlebih dahulu!")
