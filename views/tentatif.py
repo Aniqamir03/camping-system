@@ -3,9 +3,6 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import datetime
 import urllib.parse
-from PIL import Image
-import base64
-import io
 
 st.title("📅 Tentatif & Maklumat Lokasi")
 
@@ -13,17 +10,6 @@ st.title("📅 Tentatif & Maklumat Lokasi")
 current_trip = st.session_state.get('current_trip_id', '')
 
 conn = st.connection("gsheets", type=GSheetsConnection)
-
-# --- FUNGSI PROSES POSTER KEPADA BASE64 ---
-def proses_poster_ke_base64(fail_gambar):
-    img = Image.open(fail_gambar)
-    img.thumbnail((800, 1200))  # Batasan resolusi optimal untuk poster di web
-    buffer = io.BytesIO()
-    if img.mode in ("RGBA", "P"):
-        img = img.convert("RGB")
-    img.save(buffer, format="JPEG", quality=85)
-    img_str = base64.b64encode(buffer.getvalue()).decode()
-    return f"data:image/jpeg;base64,{img_str}"
 
 # --- FUNGSI BANTUAN UNTUK KALENDAR ---
 def parse_tarikh(tarikh_str):
@@ -62,7 +48,7 @@ try:
             maps_url = default_maps if raw_maps.lower() in ['nan', ''] else raw_maps
             waze_url = default_waze if raw_waze.lower() in ['nan', ''] else raw_waze
             
-            # Tarik data poster string Base64 dari GSheets
+            # Tarik pautan URL poster dari GSheets
             poster_pic = str(info_semasa.iloc[0].get('Poster_Pic', '')).strip()
 except:
     pass
@@ -98,15 +84,15 @@ with col2:
 st.divider()
 
 
-# --- 2. PAPARAN POSTER AKTIVITI (MENGGANTIKAN JADUAL TABULAR) ---
+# --- 2. PAPARAN POSTER AKTIVITI ---
 st.subheader("🗓️ Poster Jadual Aktiviti Kumpulan")
-if pd.notna(poster_pic) and poster_pic.startswith("data:image"):
+if pd.notna(poster_pic) and poster_pic != "" and poster_pic.lower() != "nan":
     try:
         st.image(poster_pic, use_container_width=True, caption=f"Poster Rasmi Aktiviti - {lokasi_kem}")
     except:
-        st.error("Gagal memaparkan gambar poster aktiviti.")
+        st.error("Gagal memaparkan gambar poster. Pastikan pautan (URL) yang dimasukkan oleh Admin adalah tepat.")
 else:
-    st.info("ℹ️ Belum ada poster jadual aktiviti yang dimuat naik untuk trip ini oleh Admin.")
+    st.info("ℹ️ Belum ada poster jadual aktiviti untuk trip ini. Admin akan kemaskini sebentar lagi.")
 
 st.divider()
 
@@ -146,7 +132,7 @@ if st.session_state["role"] == "Admin":
             col_new_in, col_new_out = st.columns(2)
             with col_new_in:
                 new_in = st.date_input("Tarikh Check-In / Bertolak", value=datetime.date.today(), key="new_in")
-            with col_new_out: # <--- TYPO TELAH DIBETULKAN DI SINI (col_new_out)
+            with col_new_out: 
                 new_out = st.date_input("Tarikh Check-Out / Pulang", value=datetime.date.today(), key="new_out")
                 
             submit_trip_baru = st.form_submit_button("🚀 Daftarkan Trip & Lokasi Serta-merta")
@@ -204,35 +190,33 @@ if st.session_state["role"] == "Admin":
                     st.cache_data.clear()
                     st.rerun()
                 
-    # TAB 2: MUAT NAIK POSTER AKTIVITI KHAS UNTUK ADMIN
+    # TAB 2: MASUKKAN LINK POSTER AKTIVITI (SELESAIKAN MASALAH LIMIT GSHEETS)
     with tab_poster:
         with st.form("form_unggah_poster"):
             id_trip_save = current_trip if current_trip else "TRP001"
-            st.write(f"🖼️ **Muat Naik Gambar Poster** untuk Trip ID Aktif: **{id_trip_save}**")
-            st.write("💡 *Poster yang dimuat naik akan terus dipaparkan kepada semua ahli kumpulan.*")
+            st.write(f"🖼️ **Pautkan Gambar Poster** untuk Trip ID Aktif: **{id_trip_save}**")
+            st.markdown("💡 *Sistem Pangkalan Data (GSheets) tidak dapat menyimpan fail bersaiz besar. Sila upload gambar poster anda ke laman percuma seperti [Postimages.org](https://postimages.org/) dan **tampal Direct Link** (berakhir dengan .jpg atau .png) di bawah.*")
             
-            file_poster = st.file_uploader("📸 Pilih Fail Gambar Poster (JPG/JPEG/PNG)", type=['jpg', 'jpeg', 'png'])
-            submit_poster = st.form_submit_button("Simpan & Kemaskini Poster")
+            url_poster_baru = st.text_input("🔗 URL Gambar Poster (Contoh: https://i.postimg.cc/gambar.jpg)", value=poster_pic if poster_pic != "nan" else "")
+            submit_poster = st.form_submit_button("Simpan Pautan Poster")
             
             if submit_poster:
-                if file_poster is not None:
-                    with st.spinner("Sedang memproses dan menyimpan gambar poster ke pangkalan data..."):
+                if url_poster_baru.strip() != "":
+                    with st.spinner("Sedang menyelaraskan pautan poster ke pangkalan data..."):
                         try:
-                            # Konversi file gambar menjadi string Base64
-                            kod_base64 = proses_poster_ke_base64(file_poster)
                             info_pukal = conn.read(worksheet="Info_Kem", ttl=0)
                             
-                            # Seragamkan tipe data menjadi string untuk menghindari ralat NaN
+                            # Seragamkan format untuk elak ralat
                             for col in info_pukal.columns:
                                 info_pukal[col] = info_pukal[col].astype(str).replace('nan', '').str.strip()
                             
                             if 'Poster_Pic' not in info_pukal.columns:
                                 info_pukal['Poster_Pic'] = ""
                             
-                            # Periksa apakah data Trip ID saat ini sudah ada di tab Info_Kem
+                            # Kemaskini database
                             if id_trip_save in info_pukal['ID_Trip'].values:
                                 idx = info_pukal.index[info_pukal['ID_Trip'] == id_trip_save][0]
-                                info_pukal.at[idx, 'Poster_Pic'] = kod_base64
+                                info_pukal.at[idx, 'Poster_Pic'] = url_poster_baru.strip()
                             else:
                                 new_row = pd.DataFrame([{
                                     "ID_Trip": id_trip_save,
@@ -241,16 +225,16 @@ if st.session_state["role"] == "Admin":
                                     "Check_Out": default_out,
                                     "Maps_URL": default_maps,
                                     "Waze_URL": default_waze,
-                                    "Poster_Pic": kod_base64
+                                    "Poster_Pic": url_poster_baru.strip()
                                 }])
                                 info_pukal = pd.concat([info_pukal, new_row], ignore_index=True)
                             
-                            # Perbarui lembar kerja GSheets secara massal
+                            # Simpan ke GSheets
                             conn.update(worksheet="Info_Kem", data=info_pukal)
-                            st.success("Poster aktiviti berjaya disimpan dan diselaraskan ke Google Sheets!")
+                            st.success("Pautan poster berjaya disimpan dan diselaraskan!")
                             st.cache_data.clear()
                             st.rerun()
                         except Exception as e:
-                            st.error(f"Gagal memproses gambar poster: {e}")
+                            st.error(f"Gagal memproses pautan poster: {e}")
                 else:
-                    st.warning("Sila pilih fail gambar poster terlebih dahulu!")
+                    st.warning("Sila masukkan pautan (URL) gambar poster terlebih dahulu!")
