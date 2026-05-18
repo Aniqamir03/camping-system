@@ -30,34 +30,35 @@ lokasi_kem, check_in, check_out, maps_url, waze_url = default_lokasi, default_in
 try:
     info_db = conn.read(worksheet="Info_Kem", ttl=0)
     if not info_db.empty:
-        # Bersihkan data kolom terlebih dahulu
-        for col in info_db.columns:
-            info_db[col] = info_db[col].astype(str).replace('nan', '').str.strip()
-            
         # Tapis info lokasi berdasarkan trip saat ini
-        if current_trip:
+        if current_trip and 'ID_Trip' in info_db.columns:
+            info_db['ID_Trip'] = info_db['ID_Trip'].astype(str).replace('nan', '').str.strip()
             info_semasa = info_db[info_db['ID_Trip'] == current_trip]
         else:
-            info_semasa = info_db # Jika session kosong, ambil data pertama yang ada
+            info_semasa = info_db
             
         if not info_semasa.empty:
-            lokasi_kem = info_semasa.iloc[0].get('Lokasi', default_lokasi)
-            check_in = info_semasa.iloc[0].get('Check_In', default_in)
-            check_out = info_semasa.iloc[0].get('Check_Out', default_out)
-            maps_url = info_semasa.iloc[0].get('Maps_URL', default_maps)
-            waze_url = info_semasa.iloc[0].get('Waze_URL', default_waze)
+            # Pastikan semuanya dipaksa menjadi teks (str) untuk elak error NaN
+            lokasi_kem = str(info_semasa.iloc[0].get('Lokasi', default_lokasi)).strip()
+            check_in = str(info_semasa.iloc[0].get('Check_In', default_in)).strip()
+            check_out = str(info_semasa.iloc[0].get('Check_Out', default_out)).strip()
+            
+            raw_maps = str(info_semasa.iloc[0].get('Maps_URL', default_maps)).strip()
+            raw_waze = str(info_semasa.iloc[0].get('Waze_URL', default_waze)).strip()
+            
+            # Jika Pandas baca sebagai 'nan' atau kosong, paksa guna default URL
+            maps_url = default_maps if raw_maps.lower() in ['nan', ''] else raw_maps
+            waze_url = default_waze if raw_waze.lower() in ['nan', ''] else raw_waze
 except:
     pass
 
-# Jika pautan peta di database kosong atau default, sistem akan otomatis membuatnya
-if not maps_url or maps_url == default_maps or maps_url == "":
-    lokasi_url = urllib.parse.quote(lokasi_kem)
-    maps_url = f"https://maps.google.com/?q={lokasi_url}"
+# Auto-Jana URL jika belum ditetapkan oleh Admin
+lokasi_url = urllib.parse.quote(lokasi_kem)
+if maps_url == default_maps and lokasi_kem != default_lokasi:
+    maps_url = f"https://maps.google.com/maps?q={lokasi_url}"
     waze_url = f"https://waze.com/ul?q={lokasi_url}"
 
-# Format tautan khusus untuk kebutuhan tampilan peta terbenam (Embed Iframe)
-lokasi_url_embed = urllib.parse.quote(lokasi_kem)
-embed_map_url = f"https://maps.google.com/maps?q={lokasi_url_embed}&output=embed"
+embed_map_url = f"https://maps.google.com/maps?q={lokasi_url}&output=embed"
 
 # Paparkan Maklumat Lokasi Tapak Semasa
 st.subheader("📍 Info Tapak Perkhemahan")
@@ -146,12 +147,11 @@ if st.session_state["role"] == "Admin":
                 if not inp_lokasi:
                     st.warning("Nama lokasi wajib diisi!")
                 else:
-                    # Berikan perlindungan fallback ID_Trip jika session memori terbaca kosong
                     id_trip_save = current_trip if current_trip else "TRP001"
-                    
-                    # Otomatis membangun URL navigasi berdasarkan teks input lokasi
                     lokasi_url_save = urllib.parse.quote(inp_lokasi.strip())
-                    auto_maps = f"https://maps.google.com/?q={lokasi_url_save}"
+                    
+                    # URL Rasmi Google Maps & Waze untuk disimpan
+                    auto_maps = f"https://maps.google.com/maps?q={lokasi_url_save}"
                     auto_waze = f"https://waze.com/ul?q={lokasi_url_save}"
                     
                     info_baru = pd.DataFrame([{
