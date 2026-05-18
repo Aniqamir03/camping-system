@@ -9,12 +9,18 @@ import io
 st.title("👤 Profil Saya")
 
 # --- FUNGSI UPLOAD KE GOOGLE DRIVE ---
+
 def muat_naik_ke_gdrive(fail_gambar, nama_fail):
     # Ambil kunci dari st.secrets GSheets yang sedia ada
     secret_dict = dict(st.secrets["connections"]["gsheets"])
+    
+    # KITA PERLUASKAN SCOPES UNTUK DRIVE DAN SPREADSHEETS DEMI KESELAMATAN AKSES
     creds = service_account.Credentials.from_service_account_info(
         secret_dict,
-        scopes=['https://www.googleapis.com/auth/drive']
+        scopes=[
+            'https://www.googleapis.com/auth/drive',
+            'https://www.googleapis.com/auth/drive.file'
+        ]
     )
     service = build('drive', 'v3', credentials=creds)
 
