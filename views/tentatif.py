@@ -26,7 +26,7 @@ default_maps = "https://maps.google.com"
 default_waze = "https://waze.com"
 
 lokasi_kem, check_in, check_out, maps_url, waze_url = default_lokasi, default_in, default_out, default_maps, default_waze
-poster_pic = ""
+p1, p2, p3 = "", "", ""
 
 try:
     info_db = conn.read(worksheet="Info_Kem", ttl=0)
@@ -48,8 +48,10 @@ try:
             maps_url = default_maps if raw_maps.lower() in ['nan', ''] else raw_maps
             waze_url = default_waze if raw_waze.lower() in ['nan', ''] else raw_waze
             
-            # Tarik pautan URL poster dari GSheets
-            poster_pic = str(info_semasa.iloc[0].get('Poster_Pic', '')).strip()
+            # Tarik 3 pautan URL poster dari GSheets
+            p1 = str(info_semasa.iloc[0].get('Poster_Pic_1', '')).strip()
+            p2 = str(info_semasa.iloc[0].get('Poster_Pic_2', '')).strip()
+            p3 = str(info_semasa.iloc[0].get('Poster_Pic_3', '')).strip()
 except:
     pass
 
@@ -84,13 +86,25 @@ with col2:
 st.divider()
 
 
-# --- 2. PAPARAN POSTER AKTIVITI ---
-st.subheader("🗓️ Poster Jadual Aktiviti Kumpulan")
-if pd.notna(poster_pic) and poster_pic != "" and poster_pic.lower() != "nan":
-    try:
-        st.image(poster_pic, use_container_width=True, caption=f"Poster Rasmi Aktiviti - {lokasi_kem}")
-    except:
-        st.error("Gagal memaparkan gambar poster. Pastikan pautan (URL) yang dimasukkan oleh Admin adalah tepat.")
+# --- 2. PAPARAN SLIDESHOW POSTER AKTIVITI ---
+st.subheader("🗓️ Poster & Jadual Aktiviti Kumpulan")
+
+# Tapis senarai poster untuk membuang yang kosong atau "nan"
+senarai_poster = [p for p in [p1, p2, p3] if p and p.lower() != "nan"]
+
+if len(senarai_poster) > 0:
+    st.write("📸 *Sila klik pada tab di bawah untuk melihat koleksi poster maklumat.*")
+    
+    # Bina Tab Slideshow bergantung kepada bilangan gambar yang dimasukkan
+    tajuk_tab = [f"Poster {i+1}" for i in range(len(senarai_poster))]
+    tabs = st.tabs(tajuk_tab)
+    
+    for idx, tab in enumerate(tabs):
+        with tab:
+            try:
+                st.image(senarai_poster[idx], use_container_width=True, caption=f"Paparan {idx+1} - {lokasi_kem}")
+            except:
+                st.error(f"Gagal memaparkan gambar untuk Poster {idx+1}. Sila semak pautan URL.")
 else:
     st.info("ℹ️ Belum ada poster jadual aktiviti untuk trip ini. Admin akan kemaskini sebentar lagi.")
 
@@ -115,10 +129,9 @@ if st.session_state["role"] == "Admin":
     st.divider()
     st.subheader("⚙️ Panel Pengurusan Tentatif & Lokasi (Admin Sahaja)")
     
-    # TAMBAH TAB KETIGA UNTUK URUS & PADAM TRIP
     tab_trip_baru, tab_poster, tab_urus_trip = st.tabs([
         "✨ Daftar Trip & Lokasi", 
-        "🖼️ Urus Poster",
+        "🖼️ Urus Poster (Slideshow)",
         "✏️ Urus & Padam Trip"
     ])
                     
@@ -171,7 +184,9 @@ if st.session_state["role"] == "Admin":
                         "Check_Out": new_out.strftime("%Y-%m-%d"),
                         "Maps_URL": auto_maps_new,
                         "Waze_URL": auto_waze_new,
-                        "Poster_Pic": ""
+                        "Poster_Pic_1": "",
+                        "Poster_Pic_2": "",
+                        "Poster_Pic_3": ""
                     }])
                     
                     try:
@@ -192,54 +207,60 @@ if st.session_state["role"] == "Admin":
                     st.cache_data.clear()
                     st.rerun()
                 
-    # TAB 2: MASUKKAN LINK POSTER AKTIVITI (KALIS RALAT)
+    # TAB 2: PENGURUSAN SLIDESHOW (3 POSTER)
     with tab_poster:
         with st.form("form_unggah_poster"):
             id_trip_save = current_trip if current_trip else "TRP001"
-            st.write(f"🖼️ **Pautkan Gambar Poster** untuk Trip ID Aktif: **{id_trip_save}**")
-            st.markdown("💡 *Sila upload gambar poster anda ke laman percuma seperti [Postimages.org](https://postimages.org/) dan **tampal Direct Link** (berakhir dengan .jpg atau .png) di bawah.*")
+            st.write(f"🖼️ **Urus Pautan Poster (Slideshow)** untuk Trip ID Aktif: **{id_trip_save}**")
+            st.markdown("💡 *Sila tampal Direct Link (berakhir .jpg/.png) ke dalam ruangan di bawah. Anda boleh masukkan sehingga 3 keping poster.*")
             
-            url_poster_baru = st.text_input("🔗 URL Gambar Poster (Contoh: https://i.postimg.cc/gambar.jpg)", value=poster_pic if poster_pic != "nan" else "")
-            submit_poster = st.form_submit_button("Simpan Pautan Poster")
+            url_p1 = st.text_input("🔗 Poster Utama (Wajib)", value=p1 if p1 != "nan" else "")
+            url_p2 = st.text_input("🔗 Poster Kedua (Pilihan)", value=p2 if p2 != "nan" else "")
+            url_p3 = st.text_input("🔗 Poster Ketiga (Pilihan)", value=p3 if p3 != "nan" else "")
+            
+            submit_poster = st.form_submit_button("Simpan Koleksi Poster")
             
             if submit_poster:
-                if url_poster_baru.strip() != "":
-                    with st.spinner("Sedang menyelaraskan pautan poster ke pangkalan data..."):
-                        try:
-                            info_pukal = conn.read(worksheet="Info_Kem", ttl=0)
-                            
-                            if info_pukal.empty or 'ID_Trip' not in info_pukal.columns:
-                                info_pukal = pd.DataFrame(columns=["ID_Trip", "Lokasi", "Check_In", "Check_Out", "Maps_URL", "Waze_URL", "Poster_Pic"])
-                            else:
-                                for col in info_pukal.columns:
-                                    info_pukal[col] = info_pukal[col].astype(str).replace('nan', '').str.strip()
-                            
-                            if 'Poster_Pic' not in info_pukal.columns:
-                                info_pukal['Poster_Pic'] = ""
-                            
-                            if id_trip_save in info_pukal['ID_Trip'].values:
-                                idx = info_pukal.index[info_pukal['ID_Trip'] == id_trip_save][0]
-                                info_pukal.at[idx, 'Poster_Pic'] = url_poster_baru.strip()
-                            else:
-                                new_row = pd.DataFrame([{
-                                    "ID_Trip": id_trip_save,
-                                    "Lokasi": default_lokasi,
-                                    "Check_In": default_in,
-                                    "Check_Out": default_out,
-                                    "Maps_URL": default_maps,
-                                    "Waze_URL": default_waze,
-                                    "Poster_Pic": url_poster_baru.strip()
-                                }])
-                                info_pukal = pd.concat([info_pukal, new_row], ignore_index=True)
-                            
-                            conn.update(worksheet="Info_Kem", data=info_pukal)
-                            st.success("Pautan poster berjaya disimpan dan diselaraskan!")
-                            st.cache_data.clear()
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Gagal memproses pautan poster: {e}")
-                else:
-                    st.warning("Sila masukkan pautan (URL) gambar poster terlebih dahulu!")
+                with st.spinner("Sedang menyelaraskan koleksi poster ke pangkalan data..."):
+                    try:
+                        info_pukal = conn.read(worksheet="Info_Kem", ttl=0)
+                        
+                        if info_pukal.empty or 'ID_Trip' not in info_pukal.columns:
+                            info_pukal = pd.DataFrame(columns=["ID_Trip", "Lokasi", "Check_In", "Check_Out", "Maps_URL", "Waze_URL", "Poster_Pic_1", "Poster_Pic_2", "Poster_Pic_3"])
+                        else:
+                            for col in info_pukal.columns:
+                                info_pukal[col] = info_pukal[col].astype(str).replace('nan', '').str.strip()
+                        
+                        # Pastikan 3 kolum poster ini wujud dalam memori DataFrame
+                        for col_name in ['Poster_Pic_1', 'Poster_Pic_2', 'Poster_Pic_3']:
+                            if col_name not in info_pukal.columns:
+                                info_pukal[col_name] = ""
+                        
+                        if id_trip_save in info_pukal['ID_Trip'].values:
+                            idx = info_pukal.index[info_pukal['ID_Trip'] == id_trip_save][0]
+                            info_pukal.at[idx, 'Poster_Pic_1'] = url_p1.strip()
+                            info_pukal.at[idx, 'Poster_Pic_2'] = url_p2.strip()
+                            info_pukal.at[idx, 'Poster_Pic_3'] = url_p3.strip()
+                        else:
+                            new_row = pd.DataFrame([{
+                                "ID_Trip": id_trip_save,
+                                "Lokasi": default_lokasi,
+                                "Check_In": default_in,
+                                "Check_Out": default_out,
+                                "Maps_URL": default_maps,
+                                "Waze_URL": default_waze,
+                                "Poster_Pic_1": url_p1.strip(),
+                                "Poster_Pic_2": url_p2.strip(),
+                                "Poster_Pic_3": url_p3.strip()
+                            }])
+                            info_pukal = pd.concat([info_pukal, new_row], ignore_index=True)
+                        
+                        conn.update(worksheet="Info_Kem", data=info_pukal)
+                        st.success("Koleksi poster (Slideshow) berjaya disimpan dan diselaraskan!")
+                        st.cache_data.clear()
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Gagal memproses pautan poster: {e}")
                     
     # TAB 3: URUS & PADAM TRIP SEMASA
     with tab_urus_trip:
@@ -292,11 +313,9 @@ if st.session_state["role"] == "Admin":
                                 if not sahkan_padam:
                                     st.error("Sila tanda (tick) pada kotak pengesahan sebelum memadam!")
                                 else:
-                                    # 1. Padam rekod dari Senarai_Trip
                                     db_trip_baru = db_trip_pukal[db_trip_pukal['ID_Trip'] != current_trip]
                                     conn.update(worksheet="Senarai_Trip", data=db_trip_baru)
                                     
-                                    # 2. Padam rekod dari Info_Kem
                                     try:
                                         info_pukal = conn.read(worksheet="Info_Kem", ttl=0)
                                         info_baru = info_pukal[info_pukal['ID_Trip'] != current_trip]
@@ -304,7 +323,7 @@ if st.session_state["role"] == "Admin":
                                     except:
                                         pass
                                         
-                                    st.session_state['current_trip_id'] = "" # Reset pilihan
+                                    st.session_state['current_trip_id'] = "" 
                                     st.success(f"Aktiviti {nama_semasa} berjaya dipadamkan sepenuhnya.")
                                     st.cache_data.clear()
                                     st.rerun()
