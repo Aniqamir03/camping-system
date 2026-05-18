@@ -190,7 +190,7 @@ if st.session_state["role"] == "Admin":
                     st.cache_data.clear()
                     st.rerun()
                 
-    # TAB 2: MASUKKAN LINK POSTER AKTIVITI (SELESAIKAN MASALAH LIMIT GSHEETS)
+    # TAB 2: MASUKKAN LINK POSTER AKTIVITI (KALIS RALAT)
     with tab_poster:
         with st.form("form_unggah_poster"):
             id_trip_save = current_trip if current_trip else "TRP001"
@@ -206,9 +206,13 @@ if st.session_state["role"] == "Admin":
                         try:
                             info_pukal = conn.read(worksheet="Info_Kem", ttl=0)
                             
-                            # Seragamkan format untuk elak ralat
-                            for col in info_pukal.columns:
-                                info_pukal[col] = info_pukal[col].astype(str).replace('nan', '').str.strip()
+                            # PENAPIS KEBAL: Jika tab kosong atau rosak, bina dataframe baru
+                            if info_pukal.empty or 'ID_Trip' not in info_pukal.columns:
+                                info_pukal = pd.DataFrame(columns=["ID_Trip", "Lokasi", "Check_In", "Check_Out", "Maps_URL", "Waze_URL", "Poster_Pic"])
+                            else:
+                                # Seragamkan format untuk elak ralat
+                                for col in info_pukal.columns:
+                                    info_pukal[col] = info_pukal[col].astype(str).replace('nan', '').str.strip()
                             
                             if 'Poster_Pic' not in info_pukal.columns:
                                 info_pukal['Poster_Pic'] = ""
