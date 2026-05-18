@@ -6,23 +6,27 @@ st.set_page_config(page_title="Sistem Perkhemahan", layout="wide")
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
     st.session_state["role"] = None
+    st.session_state["username"] = ""
+    st.session_state["full_name"] = ""
 
-# 2. Daftarkan Muka Surat (Pages) dari folder 'views'
-tentatif_page = st.Page("views/tentatif.py", title="Tentatif & Lokasi", icon="📅")
-tugas_page = st.Page("views/tugas.py", title="Jadual Tugasan", icon="🔥")
+# 2. Daftarkan SEMUA Muka Surat (Pages) dari folder 'views'
+# (Pastikan nama fail dalam folder 'views' sama sebiji macam di bawah)
 login_page = st.Page("views/login.py", title="Log Masuk", icon="🔐")
 dashboard_page = st.Page("views/dashboard.py", title="Dashboard", icon="🏕️")
+tentatif_page = st.Page("views/tentatif.py", title="Tentatif & Lokasi", icon="📅")
+tugas_page = st.Page("views/tugas.py", title="Jadual Tugasan", icon="🔥")
+inventory_page = st.Page("views/inventory.py", title="Peralatan", icon="🎒")
+kewangan_page = st.Page("views/kewangan.py", title="Kewangan", icon="💰")
 profil_page = st.Page("views/profil.py", title="Profil Saya", icon="👤")
 admin_page = st.Page("views/admin.py", title="Urus Ahli", icon="⚙️")
 
 # 3. Kawalan Navigasi (Routing Logic)
 if not st.session_state["logged_in"]:
-    # SITUASI A: Jika BELUM log masuk, hanya tunjuk page Login sahaja
+    # Jika BELUM log masuk, hanya tunjuk page Login
     pg = st.navigation([login_page])
 else:
-    # SITUASI B: Jika DAH log masuk, tapis menu mengikut Role masing-masing
+    # Jika DAH log masuk, tunjuk page mengikut Role masing-masing
     if st.session_state["role"] == "Admin":
-        # Menu penuh termasuk "Urus Ahli (admin_page)" untuk Admin
         pg = st.navigation([
             dashboard_page, 
             tentatif_page, 
@@ -33,7 +37,6 @@ else:
             admin_page
         ])
     else:
-        # Menu penuh TANPA "admin_page" untuk Member biasa (Fitri, Mok Hanafi, Paktam, dll)
         pg = st.navigation([
             dashboard_page, 
             tentatif_page, 
