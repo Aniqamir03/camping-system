@@ -115,9 +115,11 @@ if st.session_state["role"] == "Admin":
     st.divider()
     st.subheader("⚙️ Panel Pengurusan Tentatif & Lokasi (Admin Sahaja)")
     
-    tab_trip_baru, tab_poster = st.tabs([
-        "✨ Daftar Trip & Lokasi Baharu", 
-        "🖼️ Urus Poster Aktiviti"
+    # TAMBAH TAB KETIGA UNTUK URUS & PADAM TRIP
+    tab_trip_baru, tab_poster, tab_urus_trip = st.tabs([
+        "✨ Daftar Trip & Lokasi", 
+        "🖼️ Urus Poster",
+        "✏️ Urus & Padam Trip"
     ])
                     
     # TAB 1: BORANG MAGIK UNTUK DAFTAR TRIP + LOKASI + TARIKH SERENTAK 
@@ -195,7 +197,7 @@ if st.session_state["role"] == "Admin":
         with st.form("form_unggah_poster"):
             id_trip_save = current_trip if current_trip else "TRP001"
             st.write(f"🖼️ **Pautkan Gambar Poster** untuk Trip ID Aktif: **{id_trip_save}**")
-            st.markdown("💡 *Sistem Pangkalan Data (GSheets) tidak dapat menyimpan fail bersaiz besar. Sila upload gambar poster anda ke laman percuma seperti [Postimages.org](https://postimages.org/) dan **tampal Direct Link** (berakhir dengan .jpg atau .png) di bawah.*")
+            st.markdown("💡 *Sila upload gambar poster anda ke laman percuma seperti [Postimages.org](https://postimages.org/) dan **tampal Direct Link** (berakhir dengan .jpg atau .png) di bawah.*")
             
             url_poster_baru = st.text_input("🔗 URL Gambar Poster (Contoh: https://i.postimg.cc/gambar.jpg)", value=poster_pic if poster_pic != "nan" else "")
             submit_poster = st.form_submit_button("Simpan Pautan Poster")
@@ -206,18 +208,15 @@ if st.session_state["role"] == "Admin":
                         try:
                             info_pukal = conn.read(worksheet="Info_Kem", ttl=0)
                             
-                            # PENAPIS KEBAL: Jika tab kosong atau rosak, bina dataframe baru
                             if info_pukal.empty or 'ID_Trip' not in info_pukal.columns:
                                 info_pukal = pd.DataFrame(columns=["ID_Trip", "Lokasi", "Check_In", "Check_Out", "Maps_URL", "Waze_URL", "Poster_Pic"])
                             else:
-                                # Seragamkan format untuk elak ralat
                                 for col in info_pukal.columns:
                                     info_pukal[col] = info_pukal[col].astype(str).replace('nan', '').str.strip()
                             
                             if 'Poster_Pic' not in info_pukal.columns:
                                 info_pukal['Poster_Pic'] = ""
                             
-                            # Kemaskini database
                             if id_trip_save in info_pukal['ID_Trip'].values:
                                 idx = info_pukal.index[info_pukal['ID_Trip'] == id_trip_save][0]
                                 info_pukal.at[idx, 'Poster_Pic'] = url_poster_baru.strip()
@@ -233,7 +232,6 @@ if st.session_state["role"] == "Admin":
                                 }])
                                 info_pukal = pd.concat([info_pukal, new_row], ignore_index=True)
                             
-                            # Simpan ke GSheets
                             conn.update(worksheet="Info_Kem", data=info_pukal)
                             st.success("Pautan poster berjaya disimpan dan diselaraskan!")
                             st.cache_data.clear()
@@ -242,3 +240,75 @@ if st.session_state["role"] == "Admin":
                             st.error(f"Gagal memproses pautan poster: {e}")
                 else:
                     st.warning("Sila masukkan pautan (URL) gambar poster terlebih dahulu!")
+                    
+    # TAB 3: URUS & PADAM TRIP SEMASA
+    with tab_urus_trip:
+        if not current_trip:
+            st.info("Sila pilih aktiviti/trip di menu tepi (sidebar) terlebih dahulu sebelum menguruskannya.")
+        else:
+            try:
+                db_trip_pukal = conn.read(worksheet="Senarai_Trip", ttl=0)
+                trip_semasa_info = db_trip_pukal[db_trip_pukal['ID_Trip'] == current_trip]
+                
+                if not trip_semasa_info.empty:
+                    info_trip = trip_semasa_info.iloc[0]
+                    nama_semasa = str(info_trip.get('Nama_Trip', ''))
+                    tarikh_semasa = str(info_trip.get('Tarikh', ''))
+                    status_semasa = str(info_trip.get('Status_Trip', 'Aktif'))
+                    
+                    st.write(f"### ⚙️ Pengurusan: **{nama_semasa}** ({current_trip})")
+                    
+                    tindakan_trip = st.radio("Pilih Tindakan Pengurusan:", ["Kemaskini Maklumat Trip", "Padam Trip ❌"])
+                    
+                    with st.form("form_urus_trip"):
+                        if tindakan_trip == "Kemaskini Maklumat Trip":
+                            edit_nama = st.text_input("Nama Aktiviti", value=nama_semasa)
+                            edit_tarikh = st.date_input("Tarikh Bertolak", value=parse_tarikh(tarikh_semasa))
+                            idx_status = 0 if status_semasa == "Aktif" else 1
+                            edit_status = st.selectbox("Status", ["Aktif", "Selesai"], index=idx_status)
+                            
+                        elif tindakan_trip == "Padam Trip ❌":
+                            st.warning(f"⚠️ AMARAN: Adakah anda pasti mahu memadam aktiviti **{nama_semasa}**? Semua maklumat lokasi dan poster berkaitan trip ini juga akan terpadam.")
+                            sahkan_padam = st.checkbox("Ya, saya pasti mahu padam trip ini sepenuhnya.")
+                            
+                        submit_urus = st.form_submit_button("Laksanakan Tindakan")
+                        
+                        if submit_urus:
+                            if tindakan_trip == "Kemaskini Maklumat Trip":
+                                if not edit_nama:
+                                    st.error("Nama aktiviti tidak boleh dibiarkan kosong!")
+                                else:
+                                    idx = db_trip_pukal.index[db_trip_pukal['ID_Trip'] == current_trip][0]
+                                    db_trip_pukal.at[idx, 'Nama_Trip'] = edit_nama.strip()
+                                    db_trip_pukal.at[idx, 'Tarikh'] = edit_tarikh.strftime("%Y-%m-%d")
+                                    db_trip_pukal.at[idx, 'Status_Trip'] = edit_status
+                                    
+                                    conn.update(worksheet="Senarai_Trip", data=db_trip_pukal)
+                                    st.success("Maklumat aktiviti berjaya dikemaskini!")
+                                    st.cache_data.clear()
+                                    st.rerun()
+                                    
+                            elif tindakan_trip == "Padam Trip ❌":
+                                if not sahkan_padam:
+                                    st.error("Sila tanda (tick) pada kotak pengesahan sebelum memadam!")
+                                else:
+                                    # 1. Padam rekod dari Senarai_Trip
+                                    db_trip_baru = db_trip_pukal[db_trip_pukal['ID_Trip'] != current_trip]
+                                    conn.update(worksheet="Senarai_Trip", data=db_trip_baru)
+                                    
+                                    # 2. Padam rekod dari Info_Kem
+                                    try:
+                                        info_pukal = conn.read(worksheet="Info_Kem", ttl=0)
+                                        info_baru = info_pukal[info_pukal['ID_Trip'] != current_trip]
+                                        conn.update(worksheet="Info_Kem", data=info_baru)
+                                    except:
+                                        pass
+                                        
+                                    st.session_state['current_trip_id'] = "" # Reset pilihan
+                                    st.success(f"Aktiviti {nama_semasa} berjaya dipadamkan sepenuhnya.")
+                                    st.cache_data.clear()
+                                    st.rerun()
+                else:
+                    st.error("Rekod aktiviti ini tidak dijumpai di pangkalan data.")
+            except Exception as e:
+                st.error(f"Gagal membaca sistem pangkalan data: {e}")
