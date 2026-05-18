@@ -9,19 +9,12 @@ st.title("👤 Profil Saya")
 
 # --- FUNGSI PROSES GAMBAR KEPADA BASE64 ---
 def proses_gambar_ke_base64(fail_gambar):
-    # Buka gambar menggunakan Pillow
     img = Image.open(fail_gambar)
-    
-    # Auto-resize gambar kepada maksimum 150x150 pixel supaya muat elok dalam GSheet
     img.thumbnail((150, 150))
-    
-    # Tukar imej kepada format Bytes
     buffer = io.BytesIO()
     if img.mode in ("RGBA", "P"):
         img = img.convert("RGB")
-    img.save(buffer, format="JPEG", quality=80) # Sederhanakan kualiti untuk jimat saiz
-    
-    # Tukar bytes menjadi teks string Base64
+    img.save(buffer, format="JPEG", quality=80)
     img_str = base64.b64encode(buffer.getvalue()).decode()
     return f"data:image/jpeg;base64,{img_str}"
 # ------------------------------------------
@@ -30,7 +23,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 users_db = conn.read(worksheet="Users", ttl=0)
 
 # Paksa kolum menjadi teks untuk elak error perpuluhan
-for col in ['Profile_Pic_URL', 'Phone_No', 'Emergency_Contact']:
+for col in ['User_ID', 'Username', 'Password', 'Full_Name', 'Role', 'Profile_Pic_URL', 'Phone_No', 'Emergency_Contact']:
     if col in users_db.columns:
         users_db[col] = users_db[col].astype(str).replace('nan', '').str.strip()
 
@@ -51,32 +44,43 @@ with st.form("update_profil_form"):
     else:
         st.info("Tiada gambar profil.")
 
-    # Butang muat naik fail dari telefon atau komputer
+    # Butang muat naik fail gambar
     gambar_baru = st.file_uploader("📸 Muat Naik Gambar Profil Baru", type=['jpg', 'jpeg', 'png'])
 
     new_phone = st.text_input("No. Telefon", value=user_data['Phone_No'])
     new_emergency = st.text_input("No. Telefon Kecemasan (Waris)", value=user_data['Emergency_Contact'])
     
+    # --- BAHAGIAN TUKAR PASSWORD (BAHARU) ---
+    st.write("---")
+    st.write("### 🔒 Keselamatan Akaun")
+    new_password = st.text_input("Kata Laluan (Password) Baharu", value=user_data['Password'], type="password")
+    # -----------------------------------------
+    
     update_btn = st.form_submit_button("Simpan Perubahan")
     
     if update_btn:
+        # Validasi kalau user sengaja kosongkan kotak password
+        if not new_password.strip():
+            st.error("Kata laluan tidak boleh dibiarkan kosong!")
+            st.stop()
+
         if gambar_baru is not None:
             with st.spinner("Sedang memproses dan menyimpan gambar profil..."):
                 try:
-                    # Tukar imej kepada teks kod dan masukkan ke database
                     kod_gambar_base64 = proses_gambar_ke_base64(gambar_baru)
                     users_db.at[user_index, 'Profile_Pic_URL'] = kod_gambar_base64
                 except Exception as e:
                     st.error(f"Gagal memproses gambar: {e}")
                     st.stop()
 
-        # Kemaskini maklumat lain
+        # Kemaskini maklumat peribadi & Password baharu ke dalam DataFrame
         users_db.at[user_index, 'Phone_No'] = str(new_phone).strip()
         users_db.at[user_index, 'Emergency_Contact'] = str(new_emergency).strip()
+        users_db.at[user_index, 'Password'] = str(new_password).strip() # <--- Simpan password baru ke DataFrame
         
         # Hantar DataFrame yang telah dikemaskini terus ke Google Sheets
         conn.update(worksheet="Users", data=users_db)
         
-        st.success("Profil berjaya dikemaskini!")
+        st.success("Profil dan kata laluan anda berjaya dikemaskini!")
         st.cache_data.clear()
         st.rerun()
