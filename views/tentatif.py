@@ -519,7 +519,7 @@ waze_url   = default_waze
 p1 = p2 = p3 = ""
 
 try:
-    info_db = conn.read(worksheet="Info_Kem", ttl=0)
+    info_db = conn.read(worksheet="Info_Kem", ttl=600)
     if not info_db.empty:
         if current_trip and 'ID_Trip' in info_db.columns:
             info_db['ID_Trip'] = info_db['ID_Trip'].astype(str).replace('nan', '').str.strip()
@@ -824,7 +824,7 @@ if st.session_state.get("role") == "Admin":
                     st.warning("Nama Aktiviti dan Nama Lokasi wajib diisi!")
                 else:
                     try:
-                        db_trip_pukal = conn.read(worksheet="Senarai_Trip", ttl=0)
+                        db_trip_pukal = conn.read(worksheet="Senarai_Trip", ttl=600)
                         next_id = f"TRP{len(db_trip_pukal) + 1:03d}" if not db_trip_pukal.empty else "TRP001"
                     except:
                         db_trip_pukal = pd.DataFrame(columns=["ID_Trip","Nama_Trip","Tarikh","Status_Trip"])
@@ -855,7 +855,7 @@ if st.session_state.get("role") == "Admin":
                     except:
                         updated_trip_db = trip_row
                     try:
-                        db_info_pukal   = conn.read(worksheet="Info_Kem", ttl=0)
+                        db_info_pukal   = conn.read(worksheet="Info_Kem", ttl=600)
                         updated_info_db = pd.concat([db_info_pukal, info_row], ignore_index=True)
                     except:
                         updated_info_db = info_row
@@ -883,7 +883,7 @@ if st.session_state.get("role") == "Admin":
             if submit_poster:
                 with st.spinner("Sedang menyelaraskan koleksi poster ke pangkalan data..."):
                     try:
-                        info_pukal = conn.read(worksheet="Info_Kem", ttl=0)
+                        info_pukal = conn.read(worksheet="Info_Kem", ttl=600)
                         if info_pukal.empty or 'ID_Trip' not in info_pukal.columns:
                             info_pukal = pd.DataFrame(columns=[
                                 "ID_Trip","Lokasi","Check_In","Check_Out",
@@ -913,6 +913,7 @@ if st.session_state.get("role") == "Admin":
 
                         conn.update(worksheet="Info_Kem", data=info_pukal)
                         st.success("Koleksi poster (Slideshow) berjaya disimpan dan diselaraskan!")
+                        # MAGIC REFRESH
                         st.cache_data.clear()
                         st.rerun()
                     except Exception as e:
@@ -925,7 +926,7 @@ if st.session_state.get("role") == "Admin":
                     "sebelum menguruskannya.")
         else:
             try:
-                db_trip_pukal = conn.read(worksheet="Senarai_Trip", ttl=0)
+                db_trip_pukal = conn.read(worksheet="Senarai_Trip", ttl=600)
                 trip_semasa_info = db_trip_pukal[db_trip_pukal['ID_Trip'] == current_trip]
 
                 if not trip_semasa_info.empty:
@@ -977,7 +978,7 @@ if st.session_state.get("role") == "Admin":
                                     db_trip_baru = db_trip_pukal[db_trip_pukal['ID_Trip'] != current_trip]
                                     conn.update(worksheet="Senarai_Trip", data=db_trip_baru)
                                     try:
-                                        info_pukal = conn.read(worksheet="Info_Kem", ttl=0)
+                                        info_pukal = conn.read(worksheet="Info_Kem", ttl=600)
                                         info_baru  = info_pukal[info_pukal['ID_Trip'] != current_trip]
                                         conn.update(worksheet="Info_Kem", data=info_baru)
                                     except:
