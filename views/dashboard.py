@@ -4,11 +4,24 @@ import pandas as pd
 from datetime import datetime
 import altair as alt
 import streamlit.components.v1 as components
+import re
 
 # Ambil ID_Trip aktif dari memori sistem (sidebar)
 current_trip = st.session_state.get('current_trip_id', '')
 
 conn = st.connection("gsheets", type=GSheetsConnection)
+
+# --- FUNGSI PEMPROSESAN URL YOUTUBE ---
+def get_yt_embed_url(url):
+    if not url or url == 'nan':
+        return None
+    # Ekstrak ID video menggunakan regex
+    video_id_match = re.search(r"(?:v=|\/)([0-9A-Za-z_-]{11}).*", url)
+    if video_id_match:
+        video_id = video_id_match.group(1)
+        # Tambah parameter autoplay=1 dan mute=1 (diperlukan oleh browser moden untuk autoplay)
+        return f"https://www.youtube.com/embed/{video_id}?autoplay=1&mute=1&loop=1&playlist={video_id}"
+    return None
 
 # --- 0. TARIK INFO TRIP UTAMA ---
 try:
@@ -49,105 +62,14 @@ if tarikh_str and tarikh_str.lower() != 'nan':
         
 st.divider()
 
-
-# --- PERSEDIAAN DATA: TARIK & TAPIS DATA USERS & KEHADIRAN ---
-try:
-    users_db = conn.read(worksheet="Users", ttl=600)
-except:
-    users_db = pd.DataFrame(columns=['Username', 'Full_Name', 'Role', 'Profile_Pic_URL'])
-
-try:
-    kehadiran_db = conn.read(worksheet="Kehadiran", ttl=600)
-except:
-    kehadiran_db = pd.DataFrame(columns=['ID_Trip', 'Username', 'Status'])
-
-# Bersihkan strings untuk elak ralat data kosong
-for col in users_db.columns:
-    users_db[col] = users_db[col].astype(str).replace('nan', '').str.strip()
-
-if not kehadiran_db.empty:
-    for col in kehadiran_db.columns:
-        kehadiran_db[col] = kehadiran_db[col].astype(str).replace('nan', '').str.strip()
-    kehadiran_semasa = kehadiran_db[kehadiran_db['ID_Trip'] == current_trip]
-else:
-    kehadiran_semasa = pd.DataFrame(columns=['ID_Trip', 'Username', 'Status'])
-
-# TAPIS KHAS: Hanya ambil user yang Role = 'Member' (Admin tidak dipaparkan)
-if not users_db.empty and 'Role' in users_db.columns:
-    users_member = users_db[users_db['Role'].str.lower() == 'member']
-else:
-    users_member = users_db
-
-# Gabungkan (Merge) senarai Member dengan status kehadiran semasa mereka
-if not users_member.empty:
-    merged_df = pd.merge(users_member, kehadiran_semasa[['Username', 'Status']], on='Username', how='left')
-    merged_df['Status'] = merged_df['Status'].fillna('Belum Sahkan')
-else:
-    merged_df = pd.DataFrame()
-
-
-# --- 2. GRID DIREKTORI PROFIL & STATUS LIVE AHLI ---
-st.subheader("👥 Kad Profil & Status Ahli Kumpulan")
-
-avatar_default = "https://cdn-icons-png.flaticon.com/512/149/149071.png"
-
-if not merged_df.empty:
-    kolum_setiap_baris = 4
-    pecahan_baris = [merged_df[i:i + kolum_setiap_baris] for i in range(0, len(merged_df), kolum_setiap_baris)]
-    
-    for baris_data in pecahan_baris:
-        cols = st.columns(kolum_setiap_baris)
-        for indeks, (_, r) in enumerate(baris_data.iterrows()):
-            with cols[indeks]:
-                url_gambar = r['Profile_Pic_URL'] if r['Profile_Pic_URL'] != "" else avatar_default
-                status_rsvp = r['Status']
-                
-                if status_rsvp == "Hadir":
-                    warna_tema = "#28a745" # Hijau
-                elif status_rsvp == "Tidak Hadir":
-                    warna_tema = "#dc3545" # Merah
-                elif status_rsvp == "Belum Pasti":
-                    warna_tema = "#ffc107" # Kuning
-                else:
-                    warna_tema = "#6c757d" # Kelabu
-                
-                kad_html = f"""
-                <div style="text-align: center; 
-                            padding: 15px; 
-                            border: 1px solid #4d4d4d; 
-                            border-radius: 12px; 
-                            margin-bottom: 20px;
-                            box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <img src="{url_gambar}" style="width: 90px; 
-                                                   height: 90px; 
-                                                   object-fit: cover; 
-                                                   border-radius: 50%; 
-                                                   border: 3px solid {warna_tema}; 
-                                                   background-color: #cccccc; 
-                                                   margin-bottom: 10px;">
-                    <p style="margin: 0px 0px 8px 0px; font-weight: bold; font-size: 14px; line-height: 1.2;">{r['Full_Name']}</p>
-                    <span style="background-color: {warna_tema}; 
-                                 color: white; 
-                                 padding: 3px 10px; 
-                                 border-radius: 12px; 
-                                 font-size: 11px; 
-                                 font-weight: bold;
-                                 display: inline-block;">{status_rsvp}</span>
-                </div>
-                """
-                st.markdown(kad_html, unsafe_allow_html=True)
-else:
-    st.info("Tiada ahli (Member) dijumpai untuk trip ini. Sila daftarkan ahli di menu 'Urus Ahli'.")
-
-st.divider()
-
-
-# --- PERSEDIAAN DATA: TARIK GAMBAR KENANGAN DARI INFO_KEM ---
+# --- PERSEDIAAN DATA: TARIK INFO_KEM (VIDEO & KENANGAN) ---
+yt_url_raw = ""
 k1, k2, k3, k4, k5 = "", "", "", "", ""
 try:
     info_db = conn.read(worksheet="Info_Kem", ttl=600)
     if not info_db.empty and current_trip in info_db['ID_Trip'].values:
         info_semasa = info_db[info_db['ID_Trip'] == current_trip].iloc[0]
+        yt_url_raw = str(info_semasa.get('Youtube_URL', '')).replace('nan', '').strip()
         k1 = str(info_semasa.get('Kenangan_1', '')).replace('nan', '').strip()
         k2 = str(info_semasa.get('Kenangan_2', '')).replace('nan', '').strip()
         k3 = str(info_semasa.get('Kenangan_3', '')).replace('nan', '').strip()
@@ -158,209 +80,168 @@ except:
 
 senarai_kenangan = [k for k in [k1, k2, k3, k4, k5] if k != ""]
 
+# --- PERSEDIAAN DATA: USERS & KEHADIRAN ---
+try:
+    users_db = conn.read(worksheet="Users", ttl=600)
+    for col in users_db.columns:
+        users_db[col] = users_db[col].astype(str).replace('nan', '').str.strip()
+    users_member = users_db[users_db['Role'].str.lower() == 'member']
+except:
+    users_member = pd.DataFrame()
+
+try:
+    kehadiran_db = conn.read(worksheet="Kehadiran", ttl=600)
+    kehadiran_semasa = kehadiran_db[kehadiran_db['ID_Trip'] == current_trip]
+except:
+    kehadiran_semasa = pd.DataFrame()
+
+if not users_member.empty:
+    merged_df = pd.merge(users_member, kehadiran_semasa[['Username', 'Status']], on='Username', how='left')
+    merged_df['Status'] = merged_df['Status'].fillna('Belum Sahkan')
+else:
+    merged_df = pd.DataFrame()
+
+
+# --- 2. SUSUNAN ATAS: PROFIL AHLI (KIRI) & YOUTUBE (KANAN) ---
+col_profil_utama, col_yt_utama = st.columns([1.8, 1.2])
+
+with col_profil_utama:
+    st.subheader("👥 Kad Profil Ahli")
+    avatar_default = "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+    
+    if not merged_df.empty:
+        # Gunakan 3 kolum di dalam ruang kiri supaya lebih kompak
+        kolum_grid = 3
+        pecahan_baris = [merged_df[i:i + kolum_grid] for i in range(0, len(merged_df), kolum_grid)]
+        
+        for baris_data in pecahan_baris:
+            cols = st.columns(kolum_grid)
+            for indeks, (_, r) in enumerate(baris_data.iterrows()):
+                with cols[indeks]:
+                    url_gambar = r['Profile_Pic_URL'] if r['Profile_Pic_URL'] != "" else avatar_default
+                    status_rsvp = r['Status']
+                    warna = "#28a745" if status_rsvp == "Hadir" else "#dc3545" if status_rsvp == "Tidak Hadir" else "#ffc107" if status_rsvp == "Belum Pasti" else "#6c757d"
+                    
+                    st.markdown(f"""
+                    <div style="text-align: center; padding: 10px; border: 1px solid #4d4d4d; border-radius: 10px; margin-bottom: 10px; background-color: rgba(255,255,255,0.05);">
+                        <img src="{url_gambar}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 50%; border: 2px solid {warna};">
+                        <p style="margin: 5px 0 0 0; font-size: 12px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{r['Full_Name']}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+    else:
+        st.info("Tiada ahli ditemui.")
+
+with col_yt_utama:
+    st.subheader("📺 Video Aktiviti")
+    yt_embed = get_yt_embed_url(yt_url_raw)
+    if yt_embed:
+        # Embed video dengan autoplay
+        st.markdown(f"""
+        <iframe width="100%" height="250" src="{yt_embed}" 
+        title="YouTube video player" frameborder="0" 
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+        allowfullscreen style="border-radius:12px;"></iframe>
+        """, unsafe_allow_html=True)
+    else:
+        st.warning("Admin belum menetapkan pautan video YouTube untuk trip ini.")
+
+st.divider()
+
 
 # --- 3. GABUNGAN CARTA PAI (KIRI) & SLIDESHOW KENANGAN (KANAN) ---
 st.subheader("📊 Rumusan Kehadiran & 📸 Kenang-Kenangan")
 
 col_kiri, col_kanan = st.columns([1, 1.2])
 
-# BAHAGIAN KIRI: CARTA PAI
 with col_kiri:
     if not merged_df.empty:
         status_counts = merged_df['Status'].value_counts()
-        
         kategori_status = ['Hadir', 'Tidak Hadir', 'Belum Pasti', 'Belum Sahkan']
         warna_status = ['#28a745', '#dc3545', '#ffc107', '#6c757d']
-        
-        df_pie = pd.DataFrame({
-            'Status': kategori_status,
-            'Jumlah': [int(status_counts.get(s, 0)) for s in kategori_status],
-            'Warna': warna_status
-        })
+        df_pie = pd.DataFrame({'Status': kategori_status, 'Jumlah': [int(status_counts.get(s, 0)) for s in kategori_status], 'Warna': warna_status})
         df_pie = df_pie[df_pie['Jumlah'] > 0]
         
         if not df_pie.empty:
             pie_chart = alt.Chart(df_pie).mark_arc(innerRadius=40).encode(
                 theta=alt.Theta(field="Jumlah", type="quantitative"),
-                color=alt.Color(field="Status", type="nominal", 
-                                scale=alt.Scale(domain=kategori_status, range=warna_status),
-                                legend=alt.Legend(title="Petunjuk Status")),
+                color=alt.Color(field="Status", type="nominal", scale=alt.Scale(domain=kategori_status, range=warna_status), legend=alt.Legend(title="Status")),
                 tooltip=['Status', 'Jumlah']
-            ).properties(
-                width=280, 
-                height=280 
-            ).configure_view(strokeWidth=0)
-            
+            ).properties(width=280, height=280).configure_view(strokeWidth=0)
             st.altair_chart(pie_chart, use_container_width=True)
         else:
-            st.write("Belum ada rekod kehadiran.")
-    else:
-        st.info("Data ahli tidak dijumpai.")
+            st.write("Belum ada rekod.")
 
-# BAHAGIAN KANAN: SLIDESHOW KENANGAN
 with col_kanan:
     if len(senarai_kenangan) > 0:
-        divs_gambar = ""
-        for img_url in senarai_kenangan:
-            divs_gambar += f"""
-            <div class="mySlidesMemory fadeMemory">
-                <img src="{img_url}" style="width:100%; height:280px; object-fit:cover; border-radius:10px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
-            </div>
-            """
-            
-        html_kod_kenangan = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+        divs_gambar = "".join([f'<div class="mySlidesMemory fadeMemory"><img src="{url}" style="width:100%; height:280px; object-fit:cover; border-radius:10px;"></div>' for url in senarai_kenangan])
+        html_kod = f"""
+        <div class="slideshow-container-mem">{divs_gambar}</div>
         <style>
-        * {{box-sizing: border-box}}
-        body {{font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: transparent;}}
-        .slideshow-container-mem {{
-          max-width: 100%;
-          position: relative;
-          margin: auto;
-          border-radius: 10px;
-        }}
-        .mySlidesMemory {{display: none; text-align: center;}}
-        .prevMem, .nextMem {{
-          cursor: pointer;
-          position: absolute;
-          top: 50%;
-          width: auto;
-          padding: 10px;
-          margin-top: -22px;
-          color: white;
-          font-weight: bold;
-          font-size: 18px;
-          transition: 0.6s ease;
-          border-radius: 0 3px 3px 0;
-          user-select: none;
-          background-color: rgba(0,0,0,0.5);
-          text-decoration: none;
-        }}
-        .nextMem {{right: 0; border-radius: 3px 0 0 3px;}}
-        .prevMem:hover, .nextMem:hover {{background-color: rgba(0,0,0,0.9);}}
-        .fadeMemory {{
-          animation-name: fadeMem;
-          animation-duration: 1.5s;
-        }}
-        @keyframes fadeMem {{
-          from {{opacity: .4}} 
-          to {{opacity: 1}}
-        }}
+            .mySlidesMemory {{display: none; text-align: center;}}
+            .fadeMemory {{animation: fadeMem 1.5s;}}
+            @keyframes fadeMem {{from {{opacity: .4}} to {{opacity: 1}}}}
         </style>
-        </head>
-        <body>
-
-        <div class="slideshow-container-mem">
-          {divs_gambar}
-          <a class="prevMem" onclick="plusSlidesMem(-1)">❮</a>
-          <a class="nextMem" onclick="plusSlidesMem(1)">❯</a>
-        </div>
-
         <script>
-        let slideIndexMem = 0;
-        let timerMem;
-        showSlidesMem();
-
-        function plusSlidesMem(n) {{
-          clearTimeout(timerMem);
-          showSlidesMem(slideIndexMem += n);
-        }}
-
-        function showSlidesMem(n) {{
-          let i;
-          let slides = document.getElementsByClassName("mySlidesMemory");
-          if (slides.length === 0) return;
-          if (n !== undefined) {{ slideIndexMem = n; }}
-          if (slideIndexMem >= slides.length) {{slideIndexMem = 0}}    
-          if (slideIndexMem < 0) {{slideIndexMem = slides.length - 1}}
-          for (i = 0; i < slides.length; i++) {{
-            slides[i].style.display = "none";  
-          }}
-          slides[slideIndexMem].style.display = "block";  
-          timerMem = setTimeout(function(){{ plusSlidesMem(1); }}, 4000); // Auto gerak 4 saat
-        }}
+            let slideIndex = 0;
+            function show() {{
+                let s = document.getElementsByClassName("mySlidesMemory");
+                for (let i=0; i<s.length; i++) s[i].style.display = "none";
+                slideIndex++; if (slideIndex > s.length) slideIndex = 1;
+                s[slideIndex-1].style.display = "block";
+                setTimeout(show, 4000);
+            }}
+            show();
         </script>
-
-        </body>
-        </html>
         """
-        components.html(html_kod_kenangan, height=300)
+        components.html(html_kod, height=300)
     else:
-        st.info("ℹ️ Ruangan memori kosong. Admin boleh muat naik gambar kenang-kenangan di panel bawah.")
+        st.info("Ruangan memori kosong.")
 
 st.divider()
 
-
-# --- 4. BUTANG PENGESAHAN KEHADIRAN & PENGUMUMAN ---
-if st.button("🚀 Klik Di Sini Untuk Membuka Halaman Pengesahan Kehadiran Anda (RSVP)", use_container_width=True, type="primary"):
+# --- 4. BUTANG RSVP ---
+if st.button("🚀 Buka Halaman Pengesahan Kehadiran (RSVP)", use_container_width=True, type="primary"):
     st.switch_page("views/kehadiran.py")
 
-st.write("---")
-st.subheader("📢 Pengumuman Penting")
-st.markdown(f"""
-* **Peringatan Ahli:** Sila pastikan no. telefon waris diisi lengkap di bahagian **Profil Saya** untuk tujuan kecemasan.
-* **Maklumat Trip:** Anda sedang melihat ringkasan status bagi projek **{nama_trip}**.
-""")
-
-
-# --- 5. PANEL ADMIN: URUS GAMBAR KENANGAN ---
+# --- 5. PANEL ADMIN: URUS VIDEO & GAMBAR ---
 if st.session_state["role"] == "Admin":
     st.divider()
-    st.subheader("⚙️ Panel Pengurusan Gambar Kenangan (Admin Sahaja)")
+    st.subheader("⚙️ Panel Admin: Urus Media")
     
-    with st.form("form_kenangan_admin"):
-        st.write(f"Sila masukkan pautan (Direct Link) gambar dari postimages.org untuk dipaparkan di *Slideshow* **{nama_trip}**.")
+    with st.form("form_media_admin"):
+        st.write("### 📺 Pautan YouTube")
+        in_yt = st.text_input("Masukkan URL YouTube (Contoh: https://www.youtube.com/watch?v=xxxx)", value=yt_url_raw)
         
-        in_k1 = st.text_input("🖼️ Gambar Kenangan 1", value=k1)
-        in_k2 = st.text_input("🖼️ Gambar Kenangan 2", value=k2)
-        in_k3 = st.text_input("🖼️ Gambar Kenangan 3", value=k3)
-        in_k4 = st.text_input("🖼️ Gambar Kenangan 4", value=k4)
-        in_k5 = st.text_input("🖼️ Gambar Kenangan 5", value=k5)
+        st.write("### 🖼️ Gambar Kenangan")
+        in_k1 = st.text_input("Kenangan 1", value=k1)
+        in_k2 = st.text_input("Kenangan 2", value=k2)
+        in_k3 = st.text_input("Kenangan 3", value=k3)
+        in_k4 = st.text_input("Kenangan 4", value=k4)
+        in_k5 = st.text_input("Kenangan 5", value=k5)
         
-        submit_kenangan = st.form_submit_button("Simpan Koleksi Kenangan")
+        submit_media = st.form_submit_button("Simpan Semua Media")
         
-        if submit_kenangan:
+        if submit_media:
             if not current_trip:
-                st.error("Sila pilih aktiviti di sidebar terlebih dahulu.")
+                st.error("Pilih trip di sidebar!")
             else:
-                with st.spinner("Sedang menyimpan pautan gambar ke pangkalan data..."):
-                    try:
-                        info_pukal = conn.read(worksheet="Info_Kem", ttl=600)
-                        
-                        # Pastikan database ada dan kolum baru wujud
-                        if info_pukal.empty or 'ID_Trip' not in info_pukal.columns:
-                            info_pukal = pd.DataFrame(columns=["ID_Trip"])
-                        
-                        for col_name in ['Kenangan_1', 'Kenangan_2', 'Kenangan_3', 'Kenangan_4', 'Kenangan_5']:
-                            if col_name not in info_pukal.columns:
-                                info_pukal[col_name] = ""
-                                
-                        # Kemaskini baris trip semasa
-                        if current_trip in info_pukal['ID_Trip'].values:
-                            idx = info_pukal.index[info_pukal['ID_Trip'] == current_trip][0]
-                            info_pukal.at[idx, 'Kenangan_1'] = in_k1.strip()
-                            info_pukal.at[idx, 'Kenangan_2'] = in_k2.strip()
-                            info_pukal.at[idx, 'Kenangan_3'] = in_k3.strip()
-                            info_pukal.at[idx, 'Kenangan_4'] = in_k4.strip()
-                            info_pukal.at[idx, 'Kenangan_5'] = in_k5.strip()
-                        else:
-                            # Jika trip ni tak pernah ada di Info_Kem langsung, kita bina row baru
-                            new_row = pd.DataFrame([{
-                                "ID_Trip": current_trip,
-                                "Kenangan_1": in_k1.strip(),
-                                "Kenangan_2": in_k2.strip(),
-                                "Kenangan_3": in_k3.strip(),
-                                "Kenangan_4": in_k4.strip(),
-                                "Kenangan_5": in_k5.strip()
-                            }])
-                            info_pukal = pd.concat([info_pukal, new_row], ignore_index=True)
-                            
+                try:
+                    info_pukal = conn.read(worksheet="Info_Kem", ttl=600)
+                    # Pastikan kolum wujud
+                    for col in ['Youtube_URL', 'Kenangan_1', 'Kenangan_2', 'Kenangan_3', 'Kenangan_4', 'Kenangan_5']:
+                        if col not in info_pukal.columns: info_pukal[col] = ""
+                    
+                    if current_trip in info_pukal['ID_Trip'].values:
+                        idx = info_pukal.index[info_pukal['ID_Trip'] == current_trip][0]
+                        info_pukal.at[idx, 'Youtube_URL'] = in_yt.strip()
+                        info_pukal.at[idx, 'Kenangan_1'] = in_k1.strip()
+                        info_pukal.at[idx, 'Kenangan_2'] = in_k2.strip()
+                        info_pukal.at[idx, 'Kenangan_3'] = in_k3.strip()
+                        info_pukal.at[idx, 'Kenangan_4'] = in_k4.strip()
+                        info_pukal.at[idx, 'Kenangan_5'] = in_k5.strip()
                         conn.update(worksheet="Info_Kem", data=info_pukal)
-                        st.success("Gambar kenang-kenangan berjaya disimpan! Slideshow akan dikemaskini.")
+                        st.success("Media dikemaskini!")
                         st.cache_data.clear()
                         st.rerun()
-                    except Exception as e:
-                        st.error(f"Gagal memproses pangkalan data: {e}")
+                except Exception as e:
+                    st.error(f"Ralat: {e}")
