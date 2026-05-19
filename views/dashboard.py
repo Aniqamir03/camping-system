@@ -2,6 +2,7 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
+import altair as alt
 
 # Ambil ID_Trip aktif dari memori sistem (sidebar)
 current_trip = st.session_state.get('current_trip_id', '')
@@ -27,7 +28,7 @@ except:
     tarikh_str = ""
 
 st.title(f"🏕️ Papan Pemuka - {nama_trip}")
-st.write(f"Selamat Datang, **{st.session_state['full_name']}**! Pantau profil dan kehadiran penuh ahli di bawah.")
+st.write(f"Selamat Datang, **{st.session_state['full_name']}**! Pantau profil dan kehadiran penuh ahli kumpulan di bawah.")
 
 # --- 1. KIRAAN DETIK (COUNTDOWN) ---
 if tarikh_str and tarikh_str.lower() != 'nan':
@@ -48,65 +49,48 @@ if tarikh_str and tarikh_str.lower() != 'nan':
 st.divider()
 
 
-# --- 2. PENGURUSAN DATA & INTEGRASI CARTA KEHADIRAN ---
-st.subheader("📊 Statistik Kehadiran Kumpulan")
-
-# Tarik data Users & Kehadiran
+# --- PERSEDIAAN DATA: TARIK & TAPIS DATA USERS & KEHADIRAN ---
 try:
     users_db = conn.read(worksheet="Users", ttl=0)
 except:
-    users_db = pd.DataFrame(columns=['Username', 'Full_Name', 'Profile_Pic_URL'])
+    users_db = pd.DataFrame(columns=['Username', 'Full_Name', 'Role', 'Profile_Pic_URL'])
 
 try:
     kehadiran_db = conn.read(worksheet="Kehadiran", ttl=0)
 except:
     kehadiran_db = pd.DataFrame(columns=['ID_Trip', 'Username', 'Status'])
 
-# Bersihkan strings untuk mengelakkan ralat data bertindih atau kosong
+# Bersihkan strings untuk elak ralat data kosong
 for col in users_db.columns:
     users_db[col] = users_db[col].astype(str).replace('nan', '').str.strip()
 
 if not kehadiran_db.empty:
     for col in kehadiran_db.columns:
         kehadiran_db[col] = kehadiran_db[col].astype(str).replace('nan', '').str.strip()
-    # Tapis rekod RSVP untuk trip aktif sahaja
     kehadiran_semasa = kehadiran_db[kehadiran_db['ID_Trip'] == current_trip]
 else:
     kehadiran_semasa = pd.DataFrame(columns=['ID_Trip', 'Username', 'Status'])
 
-# Gabungkan (Merge) senarai Users dengan status kehadiran semasa mereka
-if not users_db.empty:
-    merged_df = pd.merge(users_db, kehadiran_semasa[['Username', 'Status']], on='Username', how='left')
+# TAPIS KHAS: Hanya ambil user yang Role = 'Member' (Admin tidak dipaparkan)
+if not users_db.empty and 'Role' in users_db.columns:
+    users_member = users_db[users_db['Role'].str.lower() == 'member']
+else:
+    users_member = users_db
+
+# Gabungkan (Merge) senarai Member dengan status kehadiran semasa mereka
+if not users_member.empty:
+    merged_df = pd.merge(users_member, kehadiran_semasa[['Username', 'Status']], on='Username', how='left')
     merged_df['Status'] = merged_df['Status'].fillna('Belum Sahkan')
 else:
     merged_df = pd.DataFrame()
 
-# Bina & Paparkan Carta Bar Kehadiran
-if not merged_df.empty:
-    status_counts = merged_df['Status'].value_counts()
-    
-    # Pastikan semua jenis status sentiasa wujud dalam paksi carta untuk kekemasan visual
-    kategori_status = ['Hadir', 'Tidak Hadir', 'Belum Pasti', 'Belum Sahkan']
-    data_carta_dikit = {status: int(status_counts.get(status, 0)) for status in kategori_status}
-    
-    chart_df = pd.DataFrame(list(data_carta_dikit.items()), columns=['Status Kehadiran', 'Jumlah Ahli']).set_index('Status Kehadiran')
-    
-    # Tampilkan carta bar rasmi Streamlit
-    st.bar_chart(chart_df, use_container_width=True)
-else:
-    st.info("Data ahli tidak dijumpai untuk menjana statistik carta.")
 
-st.divider()
-
-
-# --- 3. GRID DIREKTORI PROFIL & STATUS LIVE AHLI ---
+# --- 2. GRID DIREKTORI PROFIL & STATUS LIVE AHLI (DI NAIKKAN KE ATAS) ---
 st.subheader("👥 Kad Profil & Status Ahli Kumpulan")
 
-# Pautan placeholder jika ahli belum muat naik gambar profil diri
 avatar_default = "https://cdn-icons-png.flaticon.com/512/149/149071.png"
 
 if not merged_df.empty:
-    # Kita susun dalam bentuk Grid: 4 Kolum bagi setiap baris
     kolum_setiap_baris = 4
     pecahan_baris = [merged_df[i:i + kolum_setiap_baris] for i in range(0, len(merged_df), kolum_setiap_baris)]
     
@@ -114,11 +98,9 @@ if not merged_df.empty:
         cols = st.columns(kolum_setiap_baris)
         for indeks, (_, r) in enumerate(baris_data.iterrows()):
             with cols[indeks]:
-                # Semak pautan gambar profil sedia ada
                 url_gambar = r['Profile_Pic_URL'] if r['Profile_Pic_URL'] != "" else avatar_default
                 status_rsvp = r['Status']
                 
-                # Tetapkan warna tema mengikut status maklum balas mereka
                 if status_rsvp == "Hadir":
                     warna_tema = "#28a745" # Hijau
                 elif status_rsvp == "Tidak Hadir":
@@ -126,9 +108,8 @@ if not merged_df.empty:
                 elif status_rsvp == "Belum Pasti":
                     warna_tema = "#ffc107" # Kuning
                 else:
-                    warna_tema = "#6c757d" # Kelabu (Belum Sahkan)
+                    warna_tema = "#6c757d" # Kelabu
                 
-                # Suntikan HTML & CSS untuk memastikan saiz gambar 100% sama (90px) & kedudukan simetri
                 kad_html = f"""
                 <div style="text-align: center; 
                             padding: 15px; 
@@ -155,4 +136,63 @@ if not merged_df.empty:
                 """
                 st.markdown(kad_html, unsafe_allow_html=True)
 else:
-    st.info("Sila daftarkan ahli kumpulan terlebih dahulu di menu 'Urus Ahli'.")
+    st.info("Tiada ahli (Member) dijumpai untuk trip ini. Sila daftarkan ahli di menu 'Urus Ahli'.")
+
+st.divider()
+
+
+# --- 3. CARTA PAI (PIE CHART) KECIL UNTUK KEHADIRAN ---
+st.subheader("📊 Rumusan Kehadiran")
+
+if not merged_df.empty:
+    status_counts = merged_df['Status'].value_counts()
+    
+    kategori_status = ['Hadir', 'Tidak Hadir', 'Belum Pasti', 'Belum Sahkan']
+    warna_status = ['#28a745', '#dc3545', '#ffc107', '#6c757d']
+    
+    # Bina DataFrame kecil khusus untuk Pie Chart
+    df_pie = pd.DataFrame({
+        'Status': kategori_status,
+        'Jumlah': [int(status_counts.get(s, 0)) for s in kategori_status],
+        'Warna': warna_status
+    })
+    
+    # Buang status yang jumlahnya sifar (0) supaya carta pai lebih cantik
+    df_pie = df_pie[df_pie['Jumlah'] > 0]
+    
+    # Kita pecahkan paparan kepada 3 kolum supaya carta boleh duduk kemas di tengah dan kecil
+    col_kiri, col_tengah, col_kanan = st.columns([1, 2, 1])
+    
+    with col_tengah:
+        if not df_pie.empty:
+            # Bina Carta Pai bentuk "Donut" menggunakan Altair (Kalis ralat)
+            pie_chart = alt.Chart(df_pie).mark_arc(innerRadius=40).encode(
+                theta=alt.Theta(field="Jumlah", type="quantitative"),
+                color=alt.Color(field="Status", type="nominal", 
+                                scale=alt.Scale(domain=kategori_status, range=warna_status),
+                                legend=alt.Legend(title="Petunjuk Status")),
+                tooltip=['Status', 'Jumlah']
+            ).properties(
+                width=300, # Saiz dikecilkan!
+                height=300 # Saiz dikecilkan!
+            ).configure_view(strokeWidth=0)
+            
+            st.altair_chart(pie_chart, use_container_width=False)
+        else:
+            st.write("Belum ada data secukupnya untuk carta ini.")
+else:
+    st.info("Data ahli tidak dijumpai untuk menjana statistik carta.")
+
+st.divider()
+
+
+# --- 4. BUTANG PENGESAHAN KEHADIRAN & PENGUMUMAN ---
+if st.button("🚀 Klik Di Sini Untuk Membuka Halaman Pengesahan Kehadiran Anda (RSVP)", use_container_width=True, type="primary"):
+    st.switch_page("views/kehadiran.py")
+
+st.write("---")
+st.subheader("📢 Pengumuman Penting")
+st.markdown(f"""
+* **Peringatan Ahli:** Sila pastikan no. telefon waris diisi lengkap di bahagian **Profil Saya** untuk tujuan kecemasan.
+* **Maklumat Trip:** Anda sedang melihat ringkasan status bagi projek **{nama_trip}**.
+""")
