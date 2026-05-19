@@ -443,8 +443,21 @@ def section_header(icon: str, title: str):
         unsafe_allow_html=True
     )
 
+def clean_text(value, default=""):
+    try:
+        if value is None or pd.isna(value):
+            return default
+    except:
+        pass
+
+    value = str(value).replace("nan", "").strip()
+    return value if value else default
+
 
 def status_card(status: str, catatan: str):
+    status = clean_text(status, "Belum Sahkan")
+    catatan = clean_text(catatan, "")
+
     config = {
         "Hadir": ("✅", "#0abf8a", "rgba(10,191,138,0.16)", "Kehadiran Disahkan"),
         "Tidak Hadir": ("❌", "#ef4444", "rgba(239,68,68,0.16)", "Tidak Dapat Hadir"),
@@ -511,8 +524,8 @@ try:
         ]
 
         if not rekod_user.empty:
-            status_semasa_user = rekod_user.iloc[0].get('Status', 'Belum Sahkan')
-            catatan_semasa_user = rekod_user.iloc[0].get('Catatan', '')
+            status_semasa_user = clean_text(rekod_user.iloc[0].get('Status', 'Belum Sahkan'), "Belum Sahkan")
+            catatan_semasa_user = clean_text(rekod_user.iloc[0].get('Catatan', ''), "")
 except:
     kehadiran_db = pd.DataFrame(columns=["ID_Trip", "Username", "Full_Name", "Status", "Catatan", "Masa_Sahkan"])
 
