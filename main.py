@@ -11,23 +11,23 @@ if "logged_in" not in st.session_state:
     st.session_state["username"] = ""
     st.session_state["full_name"] = ""
 
-# 2. Daftarkan Muka Surat (Pages) - FOKUS KEPADA 4 TAB UTAMA SAHAJA
+# 2. Daftarkan Muka Surat (Pages)
 login_page = st.Page("views/login.py", title="Log Masuk", icon="🔐")
 dashboard_page = st.Page("views/dashboard.py", title="Dashboard", icon="🏕️")
 tentatif_page = st.Page("views/tentatif.py", title="Tentatif & Lokasi", icon="📅")
+kehadiran_page = st.Page("views/kehadiran.py", title="Pengesahan Kehadiran", icon="📝") # <--- DAFTAR PAGE BARU
 profil_page = st.Page("views/profil.py", title="Profil Saya", icon="👤")
 admin_page = st.Page("views/admin.py", title="Urus Ahli", icon="⚙️")
 
 # 3. Kawalan Navigasi (Routing Logic)
 if not st.session_state["logged_in"]:
-    # Jika BELUM log masuk
     pg = st.navigation([login_page])
 else:
-    # Jika DAH log masuk
     if st.session_state["role"] == "Admin":
         pg = st.navigation([
             dashboard_page, 
             tentatif_page, 
+            kehadiran_page, # Diakses oleh Admin
             profil_page, 
             admin_page
         ])
@@ -35,6 +35,7 @@ else:
         pg = st.navigation([
             dashboard_page, 
             tentatif_page, 
+            kehadiran_page, # Diakses oleh Member
             profil_page
         ])
 
