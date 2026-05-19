@@ -1,19 +1,15 @@
-Boleh. Ini full code login page dengan design baru yang sama, mobile-friendly, glass, dan fix light/dark mode untuk input.
-
-```python
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 from zoneinfo import ZoneInfo
-import html as html_lib
 
 
 def clean_text(value, default=""):
     try:
         if value is None or pd.isna(value):
             return default
-    except:
+    except Exception:
         pass
 
     value = str(value).replace("nan", "").replace("NaN", "").strip()
@@ -59,17 +55,6 @@ html, body, [class*="css"] {
     z-index: 1;
 }
 
-[data-testid="stSidebar"] {
-    background: rgba(5, 20, 31, 0.78) !important;
-    backdrop-filter: blur(24px) saturate(145%) !important;
-    -webkit-backdrop-filter: blur(24px) saturate(145%) !important;
-    border-right: 1px solid rgba(255,255,255,0.12) !important;
-}
-
-[data-testid="stSidebar"] * {
-    color: rgba(255,255,255,0.88) !important;
-}
-
 h1 {
     font-size: clamp(1.75rem, 5vw, 2.65rem) !important;
     font-weight: 800 !important;
@@ -83,25 +68,12 @@ h1 {
     animation: fadeDown 0.7s ease both !important;
 }
 
-h2, h3 {
-    color: rgba(255,255,255,0.95) !important;
-    font-weight: 800 !important;
-    letter-spacing: 0 !important;
-}
-
-p, .stMarkdown p, .stText p, li {
+p, .stMarkdown p, .stText p {
     color: rgba(255,255,255,0.78) !important;
 }
 
-strong {
-    color: #ffffff !important;
-}
-
 [data-testid="stAlert"],
-[data-testid="stForm"],
-[data-testid="stMetric"],
-[data-testid="stExpander"],
-div[data-testid="stVerticalBlockBorderWrapper"] {
+[data-testid="stForm"] {
     background: rgba(255,255,255,0.075) !important;
     backdrop-filter: blur(20px) saturate(145%) !important;
     -webkit-backdrop-filter: blur(20px) saturate(145%) !important;
@@ -116,11 +88,6 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
 [data-testid="stAlert"] p,
 [data-testid="stAlert"] strong {
     color: rgba(255,255,255,0.94) !important;
-}
-
-div[data-testid="stInfo"] {
-    background: linear-gradient(135deg, rgba(10,191,138,0.16), rgba(0,119,182,0.12)) !important;
-    border: 1px solid rgba(10,191,138,0.36) !important;
 }
 
 div[data-testid="stSuccess"] {
@@ -165,13 +132,7 @@ div[data-testid="stError"] {
     box-shadow: 0 18px 42px rgba(10,191,138,0.42) !important;
 }
 
-.stButton > button:active,
-[data-testid="stFormSubmitButton"] > button:active {
-    transform: translateY(0) scale(0.98) !important;
-}
-
-.stTextInput input,
-.stTextArea textarea {
+.stTextInput input {
     background: rgba(248,250,252,0.96) !important;
     color: #0f172a !important;
     -webkit-text-fill-color: #0f172a !important;
@@ -180,18 +141,15 @@ div[data-testid="stError"] {
     border-radius: 14px !important;
     min-height: 46px !important;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.80), 0 10px 24px rgba(0,0,0,0.12) !important;
-    transition: border 0.25s ease, box-shadow 0.25s ease, background 0.25s ease !important;
 }
 
-.stTextInput input::placeholder,
-.stTextArea textarea::placeholder {
+.stTextInput input::placeholder {
     color: #64748b !important;
     -webkit-text-fill-color: #64748b !important;
     opacity: 1 !important;
 }
 
-.stTextInput input:focus,
-.stTextArea textarea:focus {
+.stTextInput input:focus {
     background: #ffffff !important;
     color: #0f172a !important;
     -webkit-text-fill-color: #0f172a !important;
@@ -199,23 +157,7 @@ div[data-testid="stError"] {
     box-shadow: 0 0 0 4px rgba(10,191,138,0.18), 0 12px 28px rgba(0,0,0,0.16) !important;
 }
 
-.stTextInput input:disabled,
-.stTextArea textarea:disabled {
-    background: rgba(226,232,240,0.95) !important;
-    color: #334155 !important;
-    -webkit-text-fill-color: #334155 !important;
-    opacity: 1 !important;
-}
-
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus {
-    -webkit-text-fill-color: #0f172a !important;
-    box-shadow: 0 0 0px 1000px #ffffff inset !important;
-}
-
-.stTextInput label,
-.stTextArea label {
+.stTextInput label {
     color: rgba(255,255,255,0.78) !important;
     font-size: 0.82rem !important;
     font-weight: 800 !important;
@@ -261,24 +203,6 @@ input:-webkit-autofill:focus {
     line-height: 1.45;
 }
 
-::-webkit-scrollbar {
-    width: 7px;
-    height: 7px;
-}
-
-::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.04);
-}
-
-::-webkit-scrollbar-thumb {
-    background: rgba(10,191,138,0.45);
-    border-radius: 999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: rgba(10,191,138,0.7);
-}
-
 @keyframes fadeDown {
     from { opacity: 0; transform: translateY(-14px); }
     to { opacity: 1; transform: translateY(0); }
@@ -321,11 +245,13 @@ inject_css()
 st.title("🔐 Log Masuk Sistem")
 
 st.markdown(
-    '<div class="login-hero">'
-    '<div class="login-hero-icon">🏕️</div>'
-    '<div class="login-hero-title">Selamat datang semula</div>'
-    '<div class="login-hero-sub">Masukkan username dan kata laluan untuk mengakses sistem perkhemahan kumpulan.</div>'
-    '</div>',
+    """
+<div class="login-hero">
+    <div class="login-hero-icon">🏕️</div>
+    <div class="login-hero-title">Selamat datang semula</div>
+    <div class="login-hero-sub">Masukkan username dan kata laluan untuk mengakses sistem perkhemahan kumpulan.</div>
+</div>
+""",
     unsafe_allow_html=True
 )
 
@@ -346,8 +272,8 @@ with st.form("login_form"):
         if not input_user or not input_pass:
             st.warning("⚠️ Sila isi Username dan Password terlebih dahulu!")
         else:
-            db_user = users_db['Username'].astype(str).str.strip().str.lower()
-            db_pass = users_db['Password'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+            db_user = users_db["Username"].astype(str).str.strip().str.lower()
+            db_pass = users_db["Password"].astype(str).str.replace(r"\.0$", "", regex=True).str.strip()
 
             in_user = str(input_user).strip().lower()
             in_pass = str(input_pass).strip()
@@ -357,9 +283,9 @@ with st.form("login_form"):
             if not match.empty:
                 user_terpilih = match.iloc[0]
 
-                username_log = clean_text(user_terpilih.get('Username', ''))
-                nama_log = clean_text(user_terpilih.get('Full_Name', ''))
-                role_log = clean_text(user_terpilih.get('Role', 'Member'), 'Member')
+                username_log = clean_text(user_terpilih.get("Username", ""))
+                nama_log = clean_text(user_terpilih.get("Full_Name", ""))
+                role_log = clean_text(user_terpilih.get("Role", "Member"), "Member")
 
                 masa_sekarang = datetime.now(ZoneInfo("Asia/Kuala_Lumpur")).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -373,7 +299,7 @@ with st.form("login_form"):
                 try:
                     try:
                         log_db = conn.read(worksheet="Log_Masuk", ttl=0)
-                    except:
+                    except Exception:
                         log_db = pd.DataFrame(columns=["Username", "Nama_Penuh", "Peranan", "Masa_Log_Masuk"])
 
                     updated_log = pd.concat([log_db, log_baru], ignore_index=True)
@@ -391,4 +317,3 @@ with st.form("login_form"):
                 st.rerun()
             else:
                 st.error("❌ Username atau Password salah! Sila cuba lagi.")
-```
