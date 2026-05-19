@@ -358,9 +358,7 @@ iframe {
     }
 
     [data-testid="stHorizontalBlock"] > div {
-        width: 100% !important;
-        min-width: 100% !important;
-        flex: 1 1 100% !important;
+    min-width: 0 !important;
     }
 
     [data-testid="stForm"] {
@@ -374,6 +372,66 @@ iframe {
         min-height: 48px !important;
         font-size: 0.9rem !important;
     }
+
+    .profile-card {
+    text-align: center;
+    padding: 14px 10px;
+    border-radius: 18px;
+    margin-bottom: 12px;
+    background: rgba(255,255,255,0.075);
+    backdrop-filter: blur(18px) saturate(145%);
+    -webkit-backdrop-filter: blur(18px) saturate(145%);
+    border: 1px solid rgba(255,255,255,0.14);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.28);
+    transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
+    animation: fadeUp 0.55s ease both;
+}
+
+.profile-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 18px 42px rgba(0,0,0,0.38);
+    border-color: rgba(10,191,138,0.36);
+}
+
+.profile-avatar {
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    padding: 2px;
+    margin: 0 auto 8px auto;
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
+
+.profile-name {
+    margin: 0 0 6px 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.92);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.profile-status {
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    display: inline-block;
+}
+
+@media (max-width: 768px) {
+    .profile-card {
+        padding: 13px 10px;
+    }
+}
 
     iframe {
         height: 220px !important;
