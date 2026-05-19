@@ -16,7 +16,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 # Dapatkan nama trip semasa untuk paparan info kontekstual
 nama_trip_paparan = "Aktiviti Semasa"
 try:
-    senarai_trip = conn.read(worksheet="Senarai_Trip", ttl=0)
+    senarai_trip = conn.read(worksheet="Senarai_Trip", ttl=600)
     if not senarai_trip.empty and current_trip:
         trip_info = senarai_trip[senarai_trip['ID_Trip'] == current_trip]
         if not trip_info.empty:
@@ -31,7 +31,7 @@ status_semasa_user = "Belum Sahkan"
 catatan_semasa_user = ""
 
 try:
-    kehadiran_db = conn.read(worksheet="Kehadiran", ttl=0)
+    kehadiran_db = conn.read(worksheet="Kehadiran", ttl=600)
     if not kehadiran_db.empty:
         # Bersihkan data awal untuk elak ralat NaN
         for col in kehadiran_db.columns:
@@ -92,9 +92,11 @@ with st.form("form_rsvp_page"):
                 updated_kehadiran = data_rsvp_baru
                 
             conn.update(worksheet="Kehadiran", data=updated_kehadiran)
-            st.success("Status kehadiran anda berjaya dikemaskini!")
+            # MAGIC REFRESH
             st.cache_data.clear()
             st.rerun()
+            st.success("Status kehadiran anda berjaya dikemaskini!")
+           
 
 
 # --- JADUAL PEMANTAUAN PINTAR (KHAS UNTUK ADMIN SAHAJA) ---
@@ -103,7 +105,7 @@ if st.session_state["role"] == "Admin":
     st.subheader("📊 Panel Pemantauan Kehadiran Kumpulan (Admin Sahaja)")
     
     try:
-        db_kehadiran_papar = conn.read(worksheet="Kehadiran", ttl=0)
+        db_kehadiran_papar = conn.read(worksheet="Kehadiran", ttl=600)
         if not db_kehadiran_papar.empty and 'ID_Trip' in db_kehadiran_papar.columns:
             for col in db_kehadiran_papar.columns:
                 db_kehadiran_papar[col] = db_kehadiran_papar[col].astype(str).replace('nan', '').str.strip()
