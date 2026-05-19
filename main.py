@@ -1,25 +1,25 @@
-import streamlit as st
+import streamlit st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
 st.set_page_config(page_title="Sistem Perkhemahan", layout="wide")
 
-# 1. Inisialisasi Session State (Memori Sistem)
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
     st.session_state["role"] = None
     st.session_state["username"] = ""
     st.session_state["full_name"] = ""
 
-# 2. Daftarkan Muka Surat (Pages)
+# Daftarkan Muka Surat (Pages)
 login_page = st.Page("views/login.py", title="Log Masuk", icon="🔐")
 dashboard_page = st.Page("views/dashboard.py", title="Dashboard", icon="🏕️")
 tentatif_page = st.Page("views/tentatif.py", title="Tentatif & Lokasi", icon="📅")
-kehadiran_page = st.Page("views/kehadiran.py", title="Pengesahan Kehadiran", icon="📝") # <--- DAFTAR PAGE BARU
+kehadiran_page = st.Page("views/kehadiran.py", title="Pengesahan Kehadiran", icon="📝")
+chat_page = st.Page("views/chat.py", title="Sembang Kumpulan", icon="💬") # <--- REGISTER PAGE BARU
 profil_page = st.Page("views/profil.py", title="Profil Saya", icon="👤")
 admin_page = st.Page("views/admin.py", title="Urus Ahli", icon="⚙️")
 
-# 3. Kawalan Navigasi (Routing Logic)
+# Kawalan Navigasi
 if not st.session_state["logged_in"]:
     pg = st.navigation([login_page])
 else:
@@ -27,7 +27,8 @@ else:
         pg = st.navigation([
             dashboard_page, 
             tentatif_page, 
-            kehadiran_page, # Diakses oleh Admin
+            kehadiran_page,
+            chat_page, # Diakses oleh Admin
             profil_page, 
             admin_page
         ])
@@ -35,11 +36,11 @@ else:
         pg = st.navigation([
             dashboard_page, 
             tentatif_page, 
-            kehadiran_page, # Diakses oleh Member
+            kehadiran_page,
+            chat_page, # Diakses oleh Member
             profil_page
         ])
 
-# 3.5 KAWALAN SIDEBAR (PILIHAN TRIP & BUTANG LOG OUT)
 if st.session_state["logged_in"]:
     with st.sidebar:
         st.write("---")
@@ -66,5 +67,4 @@ if st.session_state["logged_in"]:
             st.cache_data.clear()
             st.rerun()
 
-# 4. Jalankan Navigasi
 pg.run()
