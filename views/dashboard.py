@@ -932,7 +932,7 @@ with col_kanan:
         </script>
         """
 
-        components.html(html_kod, height=400)
+        components.html(html_kod, height=100)
     else:
         st.info("Ruangan memori kosong.")
 
