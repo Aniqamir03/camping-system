@@ -122,10 +122,12 @@ with col_profil_utama:
                     status_rsvp = r['Status']
                     warna = "#28a745" if status_rsvp == "Hadir" else "#dc3545" if status_rsvp == "Tidak Hadir" else "#ffc107" if status_rsvp == "Belum Pasti" else "#6c757d"
                     
+                    # HTML yang telah dikemaskini dengan teks status RSVP
                     st.markdown(f"""
                     <div style="text-align: center; padding: 10px; border: 1px solid #4d4d4d; border-radius: 10px; margin-bottom: 10px; background-color: rgba(255,255,255,0.05);">
                         <img src="{url_gambar}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 50%; border: 2px solid {warna};">
-                        <p style="margin: 5px 0 0 0; font-size: 12px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{r['Full_Name']}</p>
+                        <p style="margin: 5px 0 3px 0; font-size: 12px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{r['Full_Name']}</p>
+                        <span style="background-color: {warna}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold; display: inline-block;">{status_rsvp}</span>
                     </div>
                     """, unsafe_allow_html=True)
     else:
