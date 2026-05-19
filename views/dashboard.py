@@ -720,7 +720,7 @@ with col_kanan:
             }}
 
             @media (max-width: 520px) {{
-                .memory-slider {{ height: 230px; }}
+                .memory-slider {{ height: 360px; }}
                 .memory-nav {{ width: 34px; height: 34px; font-size: 21px; }}
             }}
         </style>
