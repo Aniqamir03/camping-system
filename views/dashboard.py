@@ -12,7 +12,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 # --- 0. TARIK INFO TRIP UTAMA ---
 try:
-    senarai_trip = conn.read(worksheet="Senarai_Trip", ttl=0)
+    senarai_trip = conn.read(worksheet="Senarai_Trip", ttl=600)
     if not senarai_trip.empty and current_trip:
         trip_info = senarai_trip[senarai_trip['ID_Trip'] == current_trip]
         if not trip_info.empty:
@@ -52,12 +52,12 @@ st.divider()
 
 # --- PERSEDIAAN DATA: TARIK & TAPIS DATA USERS & KEHADIRAN ---
 try:
-    users_db = conn.read(worksheet="Users", ttl=0)
+    users_db = conn.read(worksheet="Users", ttl=600)
 except:
     users_db = pd.DataFrame(columns=['Username', 'Full_Name', 'Role', 'Profile_Pic_URL'])
 
 try:
-    kehadiran_db = conn.read(worksheet="Kehadiran", ttl=0)
+    kehadiran_db = conn.read(worksheet="Kehadiran", ttl=600)
 except:
     kehadiran_db = pd.DataFrame(columns=['ID_Trip', 'Username', 'Status'])
 
@@ -145,7 +145,7 @@ st.divider()
 # --- PERSEDIAAN DATA: TARIK GAMBAR KENANGAN DARI INFO_KEM ---
 k1, k2, k3, k4, k5 = "", "", "", "", ""
 try:
-    info_db = conn.read(worksheet="Info_Kem", ttl=0)
+    info_db = conn.read(worksheet="Info_Kem", ttl=600)
     if not info_db.empty and current_trip in info_db['ID_Trip'].values:
         info_semasa = info_db[info_db['ID_Trip'] == current_trip].iloc[0]
         k1 = str(info_semasa.get('Kenangan_1', '')).replace('nan', '').strip()
@@ -328,7 +328,7 @@ if st.session_state["role"] == "Admin":
             else:
                 with st.spinner("Sedang menyimpan pautan gambar ke pangkalan data..."):
                     try:
-                        info_pukal = conn.read(worksheet="Info_Kem", ttl=0)
+                        info_pukal = conn.read(worksheet="Info_Kem", ttl=600)
                         
                         # Pastikan database ada dan kolum baru wujud
                         if info_pukal.empty or 'ID_Trip' not in info_pukal.columns:
