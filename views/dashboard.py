@@ -445,27 +445,241 @@ with col_kiri:
 
 with col_kanan:
     if len(senarai_kenangan) > 0:
-        divs_gambar = "".join([f'<div class="mySlidesMemory fadeMemory"><img src="{url}" style="width:100%; height:280px; object-fit:cover; border-radius:10px;"></div>' for url in senarai_kenangan])
+        divs_gambar = "".join([
+            f"""
+            <div class="memory-slide">
+                <img src="{url}" alt="Kenangan trip">
+            </div>
+            """
+            for url in senarai_kenangan
+        ])
+
         html_kod = f"""
-        <div class="slideshow-container-mem">{divs_gambar}</div>
+        <div class="memory-glass-wrap">
+            <div class="memory-slider" id="memorySlider">
+                {divs_gambar}
+
+                <button class="memory-nav memory-prev" onclick="memoryChangeSlide(-1)">‹</button>
+                <button class="memory-nav memory-next" onclick="memoryChangeSlide(1)">›</button>
+
+                <div class="memory-dots" id="memoryDots"></div>
+            </div>
+        </div>
+
         <style>
-            .mySlidesMemory {{display: none; text-align: center;}}
-            .fadeMemory {{animation: fadeMem 1.5s;}}
-            @keyframes fadeMem {{from {{opacity: .4}} to {{opacity: 1}}}}
-        </style>
-        <script>
-            let slideIndex = 0;
-            function show() {{
-                let s = document.getElementsByClassName("mySlidesMemory");
-                for (let i=0; i<s.length; i++) s[i].style.display = "none";
-                slideIndex++; if (slideIndex > s.length) slideIndex = 1;
-                s[slideIndex-1].style.display = "block";
-                setTimeout(show, 4000);
+            .memory-glass-wrap {{
+                width: 100%;
+                border-radius: 20px;
+                overflow: hidden;
+                position: relative;
+                background: rgba(255,255,255,0.08);
+                border: 1px solid rgba(255,255,255,0.16);
+                box-shadow: 0 18px 45px rgba(0,0,0,0.34);
+                backdrop-filter: blur(18px) saturate(145%);
+                -webkit-backdrop-filter: blur(18px) saturate(145%);
             }}
-            show();
+
+            .memory-slider {{
+                position: relative;
+                width: 100%;
+                height: 290px;
+                overflow: hidden;
+                touch-action: pan-y;
+            }}
+
+            .memory-slide {{
+                display: none;
+                width: 100%;
+                height: 100%;
+                animation: memoryFade 0.75s ease both;
+            }}
+
+            .memory-slide img {{
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+                transform: scale(1.02);
+                animation: memoryZoom 4.5s ease-in-out both;
+            }}
+
+            .memory-slide::after {{
+                content: "";
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(
+                    180deg,
+                    rgba(0,0,0,0.08),
+                    rgba(0,0,0,0.18) 60%,
+                    rgba(0,0,0,0.36)
+                );
+                pointer-events: none;
+            }}
+
+            .memory-nav {{
+                position: absolute;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 38px;
+                height: 38px;
+                border-radius: 999px;
+                border: 1px solid rgba(255,255,255,0.24);
+                background: rgba(5,20,31,0.48);
+                color: white;
+                font-size: 24px;
+                line-height: 1;
+                cursor: pointer;
+                z-index: 5;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+            }}
+
+            .memory-nav:hover {{
+                background: rgba(10,191,138,0.72);
+                transform: translateY(-50%) scale(1.08);
+                box-shadow: 0 10px 28px rgba(10,191,138,0.32);
+            }}
+
+            .memory-prev {{
+                left: 12px;
+            }}
+
+            .memory-next {{
+                right: 12px;
+            }}
+
+            .memory-dots {{
+                position: absolute;
+                left: 50%;
+                bottom: 13px;
+                transform: translateX(-50%);
+                display: flex;
+                gap: 7px;
+                z-index: 6;
+                padding: 7px 9px;
+                border-radius: 999px;
+                background: rgba(5,20,31,0.34);
+                border: 1px solid rgba(255,255,255,0.14);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+            }}
+
+            .memory-dot {{
+                width: 8px;
+                height: 8px;
+                border-radius: 999px;
+                background: rgba(255,255,255,0.42);
+                cursor: pointer;
+                transition: width 0.28s ease, background 0.28s ease, transform 0.28s ease;
+            }}
+
+            .memory-dot.active {{
+                width: 24px;
+                background: #0abf8a;
+                transform: scale(1.03);
+            }}
+
+            @keyframes memoryFade {{
+                from {{
+                    opacity: 0;
+                    transform: translateX(12px) scale(1.015);
+                }}
+                to {{
+                    opacity: 1;
+                    transform: translateX(0) scale(1);
+                }}
+            }}
+
+            @keyframes memoryZoom {{
+                from {{
+                    transform: scale(1.08);
+                }}
+                to {{
+                    transform: scale(1.02);
+                }}
+            }}
+
+            @media (max-width: 520px) {{
+                .memory-slider {{
+                    height: 230px;
+                }}
+
+                .memory-nav {{
+                    width: 34px;
+                    height: 34px;
+                    font-size: 21px;
+                }}
+            }}
+        </style>
+
+        <script>
+            let memorySlideIndex = 0;
+            let memoryTimer = null;
+
+            const memorySlides = document.querySelectorAll(".memory-slide");
+            const memoryDotsBox = document.getElementById("memoryDots");
+            const memorySlider = document.getElementById("memorySlider");
+
+            memorySlides.forEach((_, index) => {{
+                const dot = document.createElement("span");
+                dot.className = "memory-dot";
+                dot.onclick = () => {{
+                    clearTimeout(memoryTimer);
+                    memoryShowSlide(index);
+                }};
+                memoryDotsBox.appendChild(dot);
+            }});
+
+            function memoryShowSlide(index) {{
+                if (!memorySlides.length) return;
+
+                memorySlides.forEach(slide => {{
+                    slide.style.display = "none";
+                }});
+
+                const dots = document.querySelectorAll(".memory-dot");
+                dots.forEach(dot => dot.classList.remove("active"));
+
+                memorySlideIndex = (index + memorySlides.length) % memorySlides.length;
+
+                memorySlides[memorySlideIndex].style.display = "block";
+                dots[memorySlideIndex].classList.add("active");
+
+                clearTimeout(memoryTimer);
+                memoryTimer = setTimeout(() => {{
+                    memoryShowSlide(memorySlideIndex + 1);
+                }}, 4200);
+            }}
+
+            function memoryChangeSlide(direction) {{
+                clearTimeout(memoryTimer);
+                memoryShowSlide(memorySlideIndex + direction);
+            }}
+
+            let memoryTouchStartX = 0;
+
+            memorySlider.addEventListener("touchstart", function(event) {{
+                memoryTouchStartX = event.touches[0].clientX;
+            }}, {{ passive: true }});
+
+            memorySlider.addEventListener("touchend", function(event) {{
+                const touchEndX = event.changedTouches[0].clientX;
+                const difference = memoryTouchStartX - touchEndX;
+
+                if (Math.abs(difference) > 45) {{
+                    memoryChangeSlide(difference > 0 ? 1 : -1);
+                }}
+            }});
+
+            memoryShowSlide(0);
         </script>
         """
-        components.html(html_kod, height=300)
+
+        components.html(html_kod, height=320)
     else:
         st.info("Ruangan memori kosong.")
 
