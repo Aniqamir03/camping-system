@@ -23,9 +23,9 @@ except Exception as e:
 
 # 2. Bersihkan data untuk elak ralat NaN
 for col in users_db.columns:
-    users_db[col] = users_db[col].astype(str).replace('nan', '').str.strip()
+    users_db[col] = users_db[col].astype(str).replace('nan', '').replace('NaN', '').str.strip()
 
-# Pastikan semua kolum lama dan baharu wujud di dalam DataFrame sistem (Termasuk Emergency_Name)
+# Pastikan semua kolum lama dan baharu wujud di dalam DataFrame sistem
 kolum_wajib = [
     'Phone_No', 'Emergency_Name', 'Emergency_Contact', 'Emergency_Relationship', 
     'Blood_Type', 'Medical_Condition', 'Profile_Pic_URL', 'Password'
@@ -57,15 +57,27 @@ if not user_info.empty:
     
     with col1:
         avatar_default = "https://cdn-icons-png.flaticon.com/512/149/149071.png"
-        url_gambar = pic_semasa if pic_semasa != "" else avatar_default
-        st.image(url_gambar, width=150, caption="Gambar Profil")
+        
+        # --- PENAPIS IMEJ PINTAR (MENYELESAIKAN ATTRIBUTE ERROR) ---
+        pic_semasa_str = str(pic_semasa).strip()
+        if pic_semasa_str.startswith("http") or pic_semasa_str.startswith("data:image"):
+            url_gambar = pic_semasa_str
+        else:
+            url_gambar = avatar_default
+            
+        try:
+            st.image(url_gambar, width=150, caption="Gambar Profil")
+        except:
+            # Jika pautan nampak macam URL tapi sebenarnya 'broken link', fallback ke default
+            st.image(avatar_default, width=150, caption="Gambar Default")
+        # -------------------------------------------------------------
         
     with col2:
         st.subheader(nama_semasa)
         st.write(f"**Username:** {username_semasa}")
         st.write(f"**Peranan (Role):** {rekod.get('Role', 'Member')}")
         
-        # Paparan info kesihatan pantas di bahagian atas demi keselamatan kecemasan
+        # Paparan info kesihatan pantas
         c_darah, c_kesihatan = st.columns(2)
         with c_darah:
             st.write(f"🩸 **Kumpulan Darah:** `{darah_semasa}`")
@@ -86,12 +98,11 @@ if not user_info.empty:
         
         st.divider()
         
-        # BAHAGIAN B: KECEMASAN & WARIS (DENGAN NAMA & DROPDOWN)
+        # BAHAGIAN B: KECEMASAN & WARIS
         st.write("### 🚨 Maklumat Kecemasan & Waris")
         edit_waris_nama = st.text_input("Nama Penuh Waris / Kenalan Kecemasan", value=waris_nama_semasa)
         edit_emg = st.text_input("Nombor Telefon Waris / Kecemasan", value=emg_semasa)
         
-        # Pilihan senarai hubungan waris mengikut rujukan dropdown
         senarai_hubungan = ["Ibu", "Ayah", "Kakak", "Abang", "Adik", "Pasangan", "Saudara", "Lain-lain"]
         idx_hubungan = senarai_hubungan.index(hubungan_semasa) if hubungan_semasa in senarai_hubungan else 0
         edit_hubungan = st.selectbox("Hubungan dengan Waris tersebut:", senarai_hubungan, index=idx_hubungan)
@@ -118,14 +129,12 @@ if not user_info.empty:
         edit_pic = st.text_input("Pautan (URL) Gambar Profil", value=pic_semasa)
         edit_pass = st.text_input("Tukar Kata Laluan Baru", value=pass_semasa, type="password")
         
-        # BUTANG SUBMIT
         submit_profil = st.form_submit_button("Simpan & Kemaskini Profil")
         
         if submit_profil:
             if not edit_nama or not edit_pass:
                 st.warning("Nama Penuh dan Kata Laluan tidak boleh dikosongkan!")
             else:
-                # Masukkan semua data baru ke dalam baris DataFrame berkaitan
                 users_db.at[idx, 'Full_Name'] = edit_nama.strip()
                 users_db.at[idx, 'Phone_No'] = edit_phone.strip()
                 users_db.at[idx, 'Emergency_Name'] = edit_waris_nama.strip()
@@ -136,7 +145,6 @@ if not user_info.empty:
                 users_db.at[idx, 'Profile_Pic_URL'] = edit_pic.strip()
                 users_db.at[idx, 'Password'] = edit_pass.strip()
                 
-                # Tolak data masuk ke Google Sheets secara terus
                 try:
                     conn.update(worksheet="Users", data=users_db)
                     st.session_state['full_name'] = edit_nama.strip()
