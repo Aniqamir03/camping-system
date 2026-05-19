@@ -179,6 +179,46 @@ div[data-testid="stError"] {
 }
 
 /* FIX LIGHT MODE INPUT TEXT */
+
+/* FIX DROPDOWN MENU TEXT */
+div[data-baseweb="popover"] {
+    background: #ffffff !important;
+}
+
+div[data-baseweb="popover"] ul,
+div[data-baseweb="popover"] li,
+div[data-baseweb="popover"] div,
+div[data-baseweb="popover"] span {
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+}
+
+div[data-baseweb="menu"] {
+    background: #ffffff !important;
+    border-radius: 14px !important;
+    box-shadow: 0 18px 45px rgba(0,0,0,0.25) !important;
+}
+
+div[data-baseweb="menu"] ul,
+div[data-baseweb="menu"] li,
+div[data-baseweb="menu"] div,
+div[data-baseweb="menu"] span {
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+}
+
+li[role="option"] {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+}
+
+li[role="option"]:hover,
+li[role="option"][aria-selected="true"] {
+    background: rgba(10,191,138,0.14) !important;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+}
 .stTextInput input,
 .stTextArea textarea,
 .stSelectbox [data-baseweb="select"],
