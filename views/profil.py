@@ -270,6 +270,12 @@ li[role="option"][aria-selected="true"] {
     opacity: 1 !important;
 }
 
+[data-testid="stFileUploader"] [role="button"] {
+    background: rgba(248,250,252,0.96) !important;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+}
+
 .stTextInput input:focus,
 .stTextArea textarea:focus {
     background: #ffffff !important;
