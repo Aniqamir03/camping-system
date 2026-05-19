@@ -617,7 +617,7 @@ with col_kanan:
             .memory-slider {{
                 position: relative;
                 width: 100%;
-                height: 290px;
+                height: 480px;
                 overflow: hidden;
                 touch-action: pan-y;
             }}
