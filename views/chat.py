@@ -32,7 +32,7 @@ st.divider()
 
 # --- 1. AMBIL DATA USERS & CHAT DARI DATABASE ---
 try:
-    users_db = conn.read(worksheet="Users", ttl=0)
+    users_db = conn.read(worksheet="Users", ttl=600)
     # Bersihkan strings
     for col in users_db.columns:
         users_db[col] = users_db[col].astype(str).replace('nan', '').str.strip()
@@ -108,7 +108,7 @@ if mesej_baru:
         try:
             # Baca semula database terkini untuk elak bertindih
             try:
-                chat_db_terkini = conn.read(worksheet="Group_Chat", ttl=0)
+                chat_db_terkini = conn.read(worksheet="Group_Chat", ttl=600)
             except:
                 chat_db_terkini = pd.DataFrame(columns=["ID_Trip", "Username", "Nama_Penuh", "Mesej", "Masa_Hantar"])
                 
@@ -116,6 +116,9 @@ if mesej_baru:
             
             # Tolak masuk ke Google Sheets
             conn.update(worksheet="Group_Chat", data=updated_chat)
+            # MAGIC REFRESH
+            st.cache_data.clear()
+            st.rerun()
             
             # Clear cache dan refresh halaman untuk tunjuk mesej baru
             st.cache_data.clear()
