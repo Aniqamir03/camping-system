@@ -4,77 +4,65 @@ import pandas as pd
 
 st.set_page_config(page_title="Sistem Perkhemahan", layout="wide")
 
-# Inisialisasi session state untuk status log masuk
+# FUNGSI CACHE: Panggil Google Sheets sekali sahaja setiap 10 minit untuk jimat API
+@st.cache_data(ttl=600)
+def get_senarai_trip():
+    conn = st.connection("gsheets", type=GSheetsConnection)
+    return conn.read(worksheet="Senarai_Trip", ttl=600)
+
+# Tetapan memori log masuk
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
+    st.session_state["role"] = None
     st.session_state["username"] = ""
-    st.session_state["role"] = ""
     st.session_state["full_name"] = ""
 
-# Fungsi untuk baca database
-@st.cache_data(ttl=60)
-def load_data():
-    conn = st.connection("gsheets", type=GSheetsConnection)
-    return conn.read(worksheet="Users")
+# Daftarkan Muka Surat (Pages)
+login_page = st.Page("views/login.py", title="Log Masuk", icon="🔐")
+dashboard_page = st.Page("views/dashboard.py", title="Dashboard", icon="🏕️")
+tentatif_page = st.Page("views/tentatif.py", title="Tentatif & Lokasi", icon="📅")
+kehadiran_page = st.Page("views/kehadiran.py", title="Pengesahan Kehadiran", icon="📝")
+chat_page = st.Page("views/chat.py", title="Sembang Kumpulan", icon="💬")
+profil_page = st.Page("views/profil.py", title="Profil Saya", icon="👤")
+admin_page = st.Page("views/admin.py", title="Urus Ahli", icon="⚙️")
 
-users_db = load_data()
-
-# --- HALAMAN LOG MASUK ---
+# Kawalan Navigasi (Siapa boleh nampak menu apa)
 if not st.session_state["logged_in"]:
-    st.title("🔐 Log Masuk Sistem Perkhemahan")
-    
-    with st.form("login_form"):
-        input_user = st.text_input("Username")
-        input_pass = st.text_input("Password", type="password")
-        submit_button = st.form_submit_button("Log Masuk")
-        
-        if submit_button:
-            # Semak padanan di dalam GSheet
-            user_match = users_db[(users_db['Username'] == input_user) & (users_db['Password'] == input_pass)]
-            
-            if not user_match.empty:
-                st.session_state["logged_in"] = True
-                st.session_state["username"] = user_match.iloc[0]['Username']
-                st.session_state["role"] = user_match.iloc[0]['Role']
-                st.session_state["full_name"] = user_match.iloc[0]['Full_Name']
-                st.rerun() # Refresh page untuk papar dashboard
-            else:
-                st.error("Username atau Password salah!")
-
-# --- HALAMAN UTAMA (DASHBOARD) ---
+    pg = st.navigation([login_page])
 else:
-    # Sidebar untuk butang Log Keluar
+    nav_list = [dashboard_page, tentatif_page, kehadiran_page, chat_page, profil_page]
+    # Hanya Admin yang ada menu Urus Ahli
+    if st.session_state["role"] == "Admin":
+        nav_list.append(admin_page)
+    pg = st.navigation(nav_list)
+
+# Paparan Sidebar (Untuk user yang dah log masuk)
+if st.session_state["logged_in"]:
     with st.sidebar:
-        st.write(f"Selamat datang, **{st.session_state['full_name']}**!")
-        st.write(f"Peranan: {st.session_state['role']}")
-        if st.button("Log Keluar"):
+        st.write("---")
+        st.write(f"Log masuk sebagai: **{st.session_state['full_name']}**")
+        st.write("🌍 **Pilih Aktiviti / Trip:**")
+        
+        try:
+            senarai_trip = get_senarai_trip()
+            if not senarai_trip.empty:
+                pilihan_trip = st.selectbox("Sila Pilih:", senarai_trip['Nama_Trip'].tolist(), label_visibility="collapsed")
+                id_terpilih = senarai_trip[senarai_trip['Nama_Trip'] == pilihan_trip]['ID_Trip'].values[0]
+                st.session_state['current_trip_id'] = id_terpilih
+            else:
+                st.warning("Tiada trip ditemui.")
+        except Exception as e:
+            st.warning("⚠️ Sila pastikan tab 'Senarai_Trip' wujud.")
+        
+        st.write("---")
+        if st.button("🚪 Log Keluar", use_container_width=True):
+            # Kosongkan semua memori bila user log keluar
             st.session_state["logged_in"] = False
+            st.session_state["role"] = None
+            st.session_state["username"] = ""
+            st.session_state["full_name"] = ""
+            st.cache_data.clear() 
             st.rerun()
 
-    st.title("🏕️ Papan Pemuka Perkhemahan")
-
-    # KAWALAN AKSES: Paparan berbeza mengikut peranan (Role)
-    if st.session_state["role"] == "Admin":
-        st.info("Anda mempunyai akses Admin.")
-        
-        tab1, tab2, tab3 = st.tabs(["Dashboard", "Urus Ahli (Admin)", "Kewangan"])
-        
-        with tab1:
-            st.write("Maklumat terkini perkhemahan...")
-            
-        with tab2:
-            st.subheader("Borang Tambah Ahli Baru")
-            st.write("Fungsi ini hanya dilihat oleh Admin. (Kod untuk tambah data ke GSheet akan diletakkan di sini).")
-            # Nanti kita akan buat borang tambah ahli di sini menggunakan st.form
-            
-    else:
-        # Paparan untuk Member biasa (seperti Fitri, Mok Hanafi, Paktam)
-        tab1, tab2 = st.tabs(["Dashboard", "Profil Saya"])
-        
-        with tab1:
-            st.write("Maklumat terkini perkhemahan...")
-            st.write("Sila sahkan kehadiran (RSVP) anda.")
-            
-        with tab2:
-            st.subheader("Kemaskini Profil")
-            st.write("Di sini ahli boleh letak URL gambar profil baru dan kemaskini nombor telefon waris.")
+# Jalankan navigasi
+pg.run()
