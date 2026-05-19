@@ -632,7 +632,7 @@ with col_kanan:
 
             .memory-slide img {{
                 width: 100%;
-                height: 100%;
+                height: 200%;
                 object-fit: cover;
                 display: block;
                 transform: scale(1.02);
@@ -720,7 +720,7 @@ with col_kanan:
             }}
 
             @media (max-width: 520px) {{
-                .memory-slider {{ height: 1360px; }}
+                .memory-slider {{ height: 360px; }}
                 .memory-nav {{ width: 34px; height: 34px; font-size: 21px; }}
             }}
         </style>
