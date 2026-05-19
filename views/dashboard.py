@@ -865,7 +865,7 @@ with col_kanan:
 
             @media (max-width: 520px) {{
     .memory-slider {{
-        height: 160px; /* UBAH TINGGI GAMBAR MOBILE DI SINI */
+        height: 220px; /* UBAH TINGGI GAMBAR MOBILE DI SINI */
     }}
         </style>
 
