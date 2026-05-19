@@ -1,7 +1,8 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
-from datetime import datetime, timedelta # <--- TAMBAH TIMEDELTA DI SINI
+from datetime import datetime
+from zoneinfo import ZoneInfo # <--- FUNGSI ZON MASA RASMI
 
 st.title("🔐 Log Masuk Sistem")
 st.write("Sila masukkan Username dan Kata Laluan anda untuk mengakses sistem.")
@@ -37,14 +38,14 @@ with st.form("login_form"):
             match = users_db[(db_user == in_user) & (db_pass == in_pass)]
             
             if not match.empty:
-                # --- 5. FUNGSI BARU: REKOD LOG MASUK (WAKTU MALAYSIA) ---
+                # --- 5. REKOD LOG MASUK (WAKTU TEPAT KUALA LUMPUR) ---
                 user_terpilih = match.iloc[0]
                 username_log = user_terpilih['Username']
                 nama_log = user_terpilih['Full_Name']
                 role_log = user_terpilih['Role']
                 
-                # MAGIK MASA: Ambil waktu UTC sebenar dan tambah 8 Jam untuk waktu Malaysia
-                masa_sekarang = (datetime.utcnow() + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
+                # MAGIK MASA TEPAT: Tarik terus dari zon masa Kuala Lumpur
+                masa_sekarang = datetime.now(ZoneInfo("Asia/Kuala_Lumpur")).strftime("%Y-%m-%d %H:%M:%S")
                 
                 # Bina baris log baru
                 log_baru = pd.DataFrame([{
@@ -67,7 +68,6 @@ with st.form("login_form"):
                     # Kemaskini ke Google Sheets
                     conn.update(worksheet="Log_Masuk", data=updated_log)
                 except Exception as log_error:
-                    # Jika gagal simpan log, biarkan sistem berjalan seperti biasa
                     pass
                 
                 # --- 6. SET MEMORI SISTEM & REDIRECT ---
