@@ -5,13 +5,11 @@ from datetime import datetime
 import altair as alt
 import streamlit.components.v1 as components
 import re
+import html as html_lib
 
-# Ambil ID_Trip aktif dari memori sistem (sidebar)
 current_trip = st.session_state.get('current_trip_id', '')
-
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# UI ENHANCEMENT - CSS SAHAJA, LOGIC ASAL DIKEKALKAN
 st.markdown("""
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
@@ -148,11 +146,6 @@ div[data-testid="stWarning"] {
     box-shadow: 0 18px 42px rgba(10,191,138,0.42) !important;
 }
 
-.stButton > button:active,
-[data-testid="stFormSubmitButton"] > button:active {
-    transform: translateY(0) scale(0.98) !important;
-}
-
 .stTextInput input,
 .stTextArea textarea,
 .stSelectbox [data-baseweb="select"] {
@@ -189,11 +182,18 @@ div[data-testid="stWarning"] {
     min-width: 0 !important;
 }
 
+.profile-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    width: 100%;
+}
+
 .profile-card {
+    min-width: 0;
     text-align: center;
     padding: 14px 10px;
     border-radius: 18px;
-    margin-bottom: 12px;
     background: rgba(255,255,255,0.075);
     backdrop-filter: blur(18px) saturate(145%);
     -webkit-backdrop-filter: blur(18px) saturate(145%);
@@ -201,6 +201,7 @@ div[data-testid="stWarning"] {
     box-shadow: 0 12px 30px rgba(0,0,0,0.28);
     transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
     animation: fadeUp 0.55s ease both;
+    overflow: hidden;
 }
 
 .profile-card:hover {
@@ -210,11 +211,11 @@ div[data-testid="stWarning"] {
 }
 
 .profile-avatar {
-    width: 62px;
-    height: 62px;
+    width: 66px;
+    height: 66px;
     border-radius: 50%;
     padding: 2px;
-    margin: 0 auto 8px auto;
+    margin: 0 auto 9px auto;
 }
 
 .profile-avatar img {
@@ -226,7 +227,7 @@ div[data-testid="stWarning"] {
 }
 
 .profile-name {
-    margin: 0 0 6px 0 !important;
+    margin: 0 0 7px 0 !important;
     font-size: 12px !important;
     font-weight: 700 !important;
     color: rgba(255,255,255,0.92) !important;
@@ -236,11 +237,15 @@ div[data-testid="stWarning"] {
 }
 
 .profile-status {
-    padding: 3px 10px;
+    max-width: 100%;
+    padding: 4px 9px;
     border-radius: 999px;
     font-size: 10px;
-    font-weight: 700;
+    font-weight: 800;
     display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .video-glass-card {
@@ -316,6 +321,27 @@ iframe {
         gap: 0.9rem !important;
     }
 
+    [data-testid="stHorizontalBlock"] > div {
+        width: 100% !important;
+        min-width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+
+    .profile-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .profile-card {
+        padding: 13px 9px;
+        min-height: 142px;
+    }
+
+    .profile-avatar {
+        width: 64px;
+        height: 64px;
+    }
+
     [data-testid="stForm"] {
         padding: 1rem !important;
         border-radius: 16px !important;
@@ -328,38 +354,40 @@ iframe {
         font-size: 0.9rem !important;
     }
 
-    .profile-card {
-        padding: 13px 10px;
-    }
-
     iframe {
         height: 220px !important;
     }
 }
 
-@media (max-width: 480px) {
-    .main .block-container {
-        padding-left: 0.65rem !important;
-        padding-right: 0.65rem !important;
+@media (max-width: 390px) {
+    .profile-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
     }
 
-    h1 {
-        font-size: 1.35rem !important;
+    .profile-card {
+        padding: 12px 7px;
     }
 
-    p {
-        font-size: 0.92rem !important;
+    .profile-name {
+        font-size: 11px !important;
     }
 
-    iframe {
-        height: 200px !important;
+    .profile-status {
+        font-size: 9px;
+        padding: 4px 7px;
+    }
+}
+
+@media (max-width: 330px) {
+    .profile-grid {
+        grid-template-columns: 1fr;
     }
 }
 </style>
 """, unsafe_allow_html=True)
 
 
-# --- FUNGSI PEMPROSESAN URL YOUTUBE ---
 def get_yt_embed_url(url):
     if not url or url == 'nan':
         return None
@@ -370,7 +398,6 @@ def get_yt_embed_url(url):
     return None
 
 
-# --- 0. TARIK INFO TRIP UTAMA ---
 try:
     senarai_trip = conn.read(worksheet="Senarai_Trip", ttl=600)
     if not senarai_trip.empty and current_trip:
@@ -389,10 +416,8 @@ except:
     tarikh_str = ""
 
 st.title(f"🏕️ Papan Pemuka - {nama_trip}")
-st.write(f"Selamat Datang, **{st.session_state['full_name']}**! Pantau profil dan kehadiran penuh ahli kumpulan di bawah.")
+st.write(f"Selamat Datang, **{st.session_state.get('full_name', 'Pengguna')}**! Pantau profil dan kehadiran penuh ahli kumpulan di bawah.")
 
-
-# --- 1. KIRAAN DETIK (COUNTDOWN) ---
 if tarikh_str and tarikh_str.lower() != 'nan':
     try:
         tarikh_kem = pd.to_datetime(tarikh_str).to_pydatetime()
@@ -410,8 +435,6 @@ if tarikh_str and tarikh_str.lower() != 'nan':
 
 st.divider()
 
-
-# --- PERSEDIAAN DATA: TARIK INFO_KEM (VIDEO & KENANGAN) ---
 yt_url_raw = ""
 k1, k2, k3, k4, k5 = "", "", "", "", ""
 
@@ -430,8 +453,6 @@ except:
 
 senarai_kenangan = [k for k in [k1, k2, k3, k4, k5] if k != ""]
 
-
-# --- PERSEDIAAN DATA: USERS & KEHADIRAN ---
 try:
     users_db = conn.read(worksheet="Users", ttl=600)
     for col in users_db.columns:
@@ -447,13 +468,15 @@ except:
     kehadiran_semasa = pd.DataFrame()
 
 if not users_member.empty:
-    merged_df = pd.merge(users_member, kehadiran_semasa[['Username', 'Status']], on='Username', how='left')
-    merged_df['Status'] = merged_df['Status'].fillna('Belum Sahkan')
+    if not kehadiran_semasa.empty and all(col in kehadiran_semasa.columns for col in ['Username', 'Status']):
+        merged_df = pd.merge(users_member, kehadiran_semasa[['Username', 'Status']], on='Username', how='left')
+        merged_df['Status'] = merged_df['Status'].fillna('Belum Sahkan')
+    else:
+        merged_df = users_member.copy()
+        merged_df['Status'] = 'Belum Sahkan'
 else:
     merged_df = pd.DataFrame()
 
-
-# --- 2. SUSUNAN ATAS: PROFIL AHLI (KIRI) & YOUTUBE (KANAN) ---
 col_profil_utama, col_yt_utama = st.columns([1.8, 1.2])
 
 with col_profil_utama:
@@ -461,38 +484,41 @@ with col_profil_utama:
     avatar_default = "https://cdn-icons-png.flaticon.com/512/149/149071.png"
 
     if not merged_df.empty:
-        kolum_grid = 3
-        pecahan_baris = [merged_df[i:i + kolum_grid] for i in range(0, len(merged_df), kolum_grid)]
+        warna_map = {
+            "Hadir": ("#0abf8a", "rgba(10,191,138,0.15)"),
+            "Tidak Hadir": ("#ef4444", "rgba(239,68,68,0.15)"),
+            "Belum Pasti": ("#f59e0b", "rgba(245,158,11,0.15)"),
+            "Belum Sahkan": ("#6b7280", "rgba(107,114,128,0.15)"),
+        }
 
-        for baris_data in pecahan_baris:
-            cols = st.columns(kolum_grid)
-            for indeks, (_, r) in enumerate(baris_data.iterrows()):
-                with cols[indeks]:
-                    url_gambar = r['Profile_Pic_URL'] if r['Profile_Pic_URL'] != "" else avatar_default
-                    status_rsvp = r['Status']
+        profile_cards = []
 
-                    warna_map = {
-                        "Hadir": ("#0abf8a", "rgba(10,191,138,0.15)"),
-                        "Tidak Hadir": ("#ef4444", "rgba(239,68,68,0.15)"),
-                        "Belum Pasti": ("#f59e0b", "rgba(245,158,11,0.15)"),
-                        "Belum Sahkan": ("#6b7280", "rgba(107,114,128,0.15)"),
-                    }
+        for _, r in merged_df.iterrows():
+            url_gambar = str(r.get('Profile_Pic_URL', '')).strip()
+            if url_gambar == "":
+                url_gambar = avatar_default
 
-                    warna, warna_bg = warna_map.get(status_rsvp, ("#6b7280", "rgba(107,114,128,0.15)"))
+            status_rsvp = str(r.get('Status', 'Belum Sahkan')).strip()
+            warna, warna_bg = warna_map.get(status_rsvp, ("#6b7280", "rgba(107,114,128,0.15)"))
 
-                    st.markdown(f"""
-                    <div class="profile-card">
-                        <div class="profile-avatar" style="border: 2.5px solid {warna}; box-shadow: 0 0 14px {warna}66;">
-                            <img src="{url_gambar}">
-                        </div>
+            nama_safe = html_lib.escape(str(r.get('Full_Name', 'Tanpa Nama')), quote=False)
+            status_safe = html_lib.escape(status_rsvp, quote=False)
+            url_safe = html_lib.escape(url_gambar, quote=True)
 
-                        <p class="profile-name">{r['Full_Name']}</p>
+            profile_cards.append(
+                f'<div class="profile-card">'
+                f'<div class="profile-avatar" style="border: 2.5px solid {warna}; box-shadow: 0 0 14px {warna}66;">'
+                f'<img src="{url_safe}" alt="{nama_safe}">'
+                f'</div>'
+                f'<p class="profile-name">{nama_safe}</p>'
+                f'<span class="profile-status" style="background: {warna_bg}; color: {warna}; border: 1px solid {warna}55;">{status_safe}</span>'
+                f'</div>'
+            )
 
-                        <span class="profile-status" style="background: {warna_bg}; color: {warna}; border: 1px solid {warna}55;">
-                            {status_rsvp}
-                        </span>
-                    </div>
-                    """, unsafe_allow_html=True)
+        st.markdown(
+            '<div class="profile-grid">' + ''.join(profile_cards) + '</div>',
+            unsafe_allow_html=True
+        )
     else:
         st.info("Tiada ahli ditemui.")
 
@@ -502,22 +528,19 @@ with col_yt_utama:
 
     if yt_embed:
         st.markdown(f"""
-        <div class="video-glass-card">
-            <iframe width="100%" height="250" src="{yt_embed}"
-            title="YouTube video player" frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowfullscreen style="display:block;"></iframe>
-        </div>
-        """, unsafe_allow_html=True)
+<div class="video-glass-card">
+    <iframe width="100%" height="250" src="{yt_embed}"
+    title="YouTube video player" frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    allowfullscreen style="display:block;"></iframe>
+</div>
+""", unsafe_allow_html=True)
     else:
         st.warning("Admin belum menetapkan pautan video YouTube untuk trip ini.")
 
 st.divider()
 
-
-# --- 3. GABUNGAN CARTA PAI (KIRI) & SLIDESHOW KENANGAN (KANAN) ---
 st.subheader("📊 Rumusan Kehadiran & 📸 Kenang-Kenangan")
-
 col_kiri, col_kanan = st.columns([1, 1.2])
 
 with col_kiri:
@@ -572,10 +595,8 @@ with col_kanan:
         <div class="memory-glass-wrap">
             <div class="memory-slider" id="memorySlider">
                 {divs_gambar}
-
                 <button class="memory-nav memory-prev" onclick="memoryChangeSlide(-1)">‹</button>
                 <button class="memory-nav memory-next" onclick="memoryChangeSlide(1)">›</button>
-
                 <div class="memory-dots" id="memoryDots"></div>
             </div>
         </div>
@@ -622,12 +643,7 @@ with col_kanan:
                 content: "";
                 position: absolute;
                 inset: 0;
-                background: linear-gradient(
-                    180deg,
-                    rgba(0,0,0,0.08),
-                    rgba(0,0,0,0.18) 60%,
-                    rgba(0,0,0,0.36)
-                );
+                background: linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.18) 60%, rgba(0,0,0,0.36));
                 pointer-events: none;
             }}
 
@@ -659,13 +675,8 @@ with col_kanan:
                 box-shadow: 0 10px 28px rgba(10,191,138,0.32);
             }}
 
-            .memory-prev {{
-                left: 12px;
-            }}
-
-            .memory-next {{
-                right: 12px;
-            }}
+            .memory-prev {{ left: 12px; }}
+            .memory-next {{ right: 12px; }}
 
             .memory-dots {{
                 position: absolute;
@@ -699,35 +710,18 @@ with col_kanan:
             }}
 
             @keyframes memoryFade {{
-                from {{
-                    opacity: 0;
-                    transform: translateX(12px) scale(1.015);
-                }}
-                to {{
-                    opacity: 1;
-                    transform: translateX(0) scale(1);
-                }}
+                from {{ opacity: 0; transform: translateX(12px) scale(1.015); }}
+                to {{ opacity: 1; transform: translateX(0) scale(1); }}
             }}
 
             @keyframes memoryZoom {{
-                from {{
-                    transform: scale(1.08);
-                }}
-                to {{
-                    transform: scale(1.02);
-                }}
+                from {{ transform: scale(1.08); }}
+                to {{ transform: scale(1.02); }}
             }}
 
             @media (max-width: 520px) {{
-                .memory-slider {{
-                    height: 230px;
-                }}
-
-                .memory-nav {{
-                    width: 34px;
-                    height: 34px;
-                    font-size: 21px;
-                }}
+                .memory-slider {{ height: 230px; }}
+                .memory-nav {{ width: 34px; height: 34px; font-size: 21px; }}
             }}
         </style>
 
@@ -800,14 +794,10 @@ with col_kanan:
 
 st.divider()
 
-
-# --- 4. BUTANG RSVP ---
 if st.button("🚀 Buka Halaman Pengesahan Kehadiran (RSVP)", use_container_width=True, type="primary"):
     st.switch_page("views/kehadiran.py")
 
-
-# --- 5. PANEL ADMIN: URUS VIDEO & GAMBAR ---
-if st.session_state["role"] == "Admin":
+if st.session_state.get("role", "") == "Admin":
     st.divider()
     st.subheader("⚙️ Panel Admin: Urus Media")
 
