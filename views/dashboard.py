@@ -259,6 +259,142 @@ div[data-testid="stWarning"] {
     animation: fadeUp 0.65s ease both;
 }
 
+/* =========================================================
+   SLIDESHOW SIZE CONTROL
+   Ubah nilai di bawah kalau gambar slideshow/poster nampak terpotong.
+
+   1) DESKTOP height:
+      --memory-slide-height: 520px;
+
+   2) MOBILE height:
+      --memory-slide-height-mobile: 420px;
+
+   3) IMAGE FIT:
+      contain = gambar penuh nampak, tak terpotong
+      cover   = gambar penuhkan kotak tapi mungkin terpotong
+   ========================================================= */
+:root {
+    --memory-slide-height: 520px;
+    --memory-slide-height-mobile: 420px;
+    --memory-image-fit: contain;
+    --memory-image-bg: rgba(0,0,0,0.26);
+}
+
+/* Class ini berada dalam components.html iframe.
+   Kalau awak nak style ini berfungsi, paste juga block slideshow ini
+   ke dalam <style> yang ada dalam html_kod slideshow. */
+.memory-glass-wrap {
+    width: 100%;
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.16);
+    box-shadow: 0 18px 45px rgba(0,0,0,0.34);
+    backdrop-filter: blur(18px) saturate(145%);
+    -webkit-backdrop-filter: blur(18px) saturate(145%);
+}
+
+.memory-slider {
+    position: relative;
+    width: 100%;
+    height: var(--memory-slide-height);
+    overflow: hidden;
+    touch-action: pan-y;
+    background: var(--memory-image-bg);
+}
+
+.memory-slide {
+    display: none;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    animation: memoryFade 0.75s ease both;
+}
+
+.memory-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: var(--memory-image-fit);
+    display: block;
+    background: var(--memory-image-bg);
+}
+
+.memory-slide::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.04), rgba(0,0,0,0.08) 60%, rgba(0,0,0,0.18));
+    pointer-events: none;
+}
+
+.memory-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.24);
+    background: rgba(5,20,31,0.48);
+    color: white;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.memory-nav:hover {
+    background: rgba(10,191,138,0.72);
+    transform: translateY(-50%) scale(1.08);
+    box-shadow: 0 10px 28px rgba(10,191,138,0.32);
+}
+
+.memory-prev {
+    left: 12px;
+}
+
+.memory-next {
+    right: 12px;
+}
+
+.memory-dots {
+    position: absolute;
+    left: 50%;
+    bottom: 13px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 7px;
+    z-index: 6;
+    padding: 7px 9px;
+    border-radius: 999px;
+    background: rgba(5,20,31,0.34);
+    border: 1px solid rgba(255,255,255,0.14);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.memory-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.42);
+    cursor: pointer;
+    transition: width 0.28s ease, background 0.28s ease, transform 0.28s ease;
+}
+
+.memory-dot.active {
+    width: 24px;
+    background: #0abf8a;
+    transform: scale(1.03);
+}
+
 .vega-embed,
 .vega-embed canvas {
     background: transparent !important;
@@ -301,6 +437,11 @@ iframe {
 @keyframes bgFloat {
     from { transform: translate3d(0,0,0); opacity: 0.7; }
     to { transform: translate3d(-16px,10px,0); opacity: 1; }
+}
+
+@keyframes memoryFade {
+    from { opacity: 0; transform: translateX(12px) scale(1.015); }
+    to { opacity: 1; transform: translateX(0) scale(1); }
 }
 
 @media (max-width: 768px) {
@@ -356,6 +497,18 @@ iframe {
 
     iframe {
         height: 220px !important;
+    }
+}
+
+@media (max-width: 520px) {
+    .memory-slider {
+        height: var(--memory-slide-height-mobile);
+    }
+
+    .memory-nav {
+        width: 34px;
+        height: 34px;
+        font-size: 21px;
     }
 }
 
