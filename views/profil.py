@@ -1,86 +1,150 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
-from PIL import Image
-import base64
-import io
 
 st.title("👤 Profil Saya")
+st.write("Kemaskini maklumat peribadi, kesihatan, dan nombor telefon kecemasan anda di sini.")
 
-# --- FUNGSI PROSES GAMBAR KEPADA BASE64 ---
-def proses_gambar_ke_base64(fail_gambar):
-    img = Image.open(fail_gambar)
-    img.thumbnail((150, 150))
-    buffer = io.BytesIO()
-    if img.mode in ("RGBA", "P"):
-        img = img.convert("RGB")
-    img.save(buffer, format="JPEG", quality=80)
-    img_str = base64.b64encode(buffer.getvalue()).decode()
-    return f"data:image/jpeg;base64,{img_str}"
-# ------------------------------------------
+# Semak siapa yang sedang log masuk
+username_semasa = st.session_state.get('username', '')
 
+if not username_semasa:
+    st.error("Sila log masuk terlebih dahulu dari halaman utama.")
+    st.stop()
+
+# 1. Sambung ke Google Sheets dengan Perisai Kebal
 conn = st.connection("gsheets", type=GSheetsConnection)
-users_db = conn.read(worksheet="Users", ttl=0)
 
-# Paksa kolum menjadi teks untuk elak error perpuluhan
-for col in ['User_ID', 'Username', 'Password', 'Full_Name', 'Role', 'Profile_Pic_URL', 'Phone_No', 'Emergency_Contact']:
-    if col in users_db.columns:
-        users_db[col] = users_db[col].astype(str).replace('nan', '').str.strip()
+try:
+    users_db = conn.read(worksheet="Users", ttl=0)
+except Exception as e:
+    st.error("⚠️ Ralat API: Tab 'Users' tidak dijumpai di dalam Google Sheets. Sila pastikan ejaannya tepat.")
+    st.stop()
 
-current_user = st.session_state["username"]
-user_index = users_db.index[users_db['Username'] == current_user].tolist()[0]
-user_data = users_db.loc[user_index]
+# 2. Bersihkan data untuk elak ralat NaN
+for col in users_db.columns:
+    users_db[col] = users_db[col].astype(str).replace('nan', '').str.strip()
 
-st.write(f"Kemaskini maklumat peribadi anda, **{user_data['Full_Name']}**.")
+# Pastikan semua kolum lama dan baharu wujud di dalam DataFrame sistem (Termasuk Emergency_Name)
+kolum_wajib = [
+    'Phone_No', 'Emergency_Name', 'Emergency_Contact', 'Emergency_Relationship', 
+    'Blood_Type', 'Medical_Condition', 'Profile_Pic_URL', 'Password'
+]
+for col in kolum_wajib:
+    if col not in users_db.columns:
+        users_db[col] = ""
 
-with st.form("update_profil_form"):
-    # Paparkan gambar profil jika ada kod Base64 tersimpan
-    pic_url = user_data['Profile_Pic_URL']
-    if pd.notna(pic_url) and pic_url.startswith("data:image"):
-        try:
-            st.image(pic_url, width=150)
-        except:
-            st.warning("Gambar profil tidak dapat dipaparkan.")
-    else:
-        st.info("Tiada gambar profil.")
+# Cari data pengguna semasa
+user_info = users_db[users_db['Username'] == username_semasa]
 
-    # Butang muat naik fail gambar
-    gambar_baru = st.file_uploader("📸 Muat Naik Gambar Profil Baru", type=['jpg', 'jpeg', 'png'])
-
-    new_phone = st.text_input("No. Telefon", value=user_data['Phone_No'])
-    new_emergency = st.text_input("No. Telefon Kecemasan (Waris)", value=user_data['Emergency_Contact'])
+if not user_info.empty:
+    idx = user_info.index[0]
+    rekod = user_info.iloc[0]
     
-    # --- BAHAGIAN TUKAR PASSWORD (BAHARU) ---
-    st.write("---")
-    st.write("### 🔒 Keselamatan Akaun")
-    new_password = st.text_input("Kata Laluan (Password) Baharu", value=user_data['Password'], type="password")
-    # -----------------------------------------
+    # Ambil data sedia ada dari database
+    nama_semasa = rekod.get('Full_Name', '')
+    phone_semasa = rekod.get('Phone_No', '')
+    waris_nama_semasa = rekod.get('Emergency_Name', '')
+    emg_semasa = rekod.get('Emergency_Contact', '')
+    hubungan_semasa = rekod.get('Emergency_Relationship', 'Ibu')
+    darah_semasa = rekod.get('Blood_Type', 'Tidak Pasti')
+    kesihatan_semasa = rekod.get('Medical_Condition', '')
+    pic_semasa = rekod.get('Profile_Pic_URL', '')
+    pass_semasa = rekod.get('Password', '')
     
-    update_btn = st.form_submit_button("Simpan Perubahan")
+    # 3. Paparan Profil Ringkas (Visual Atas)
+    col1, col2 = st.columns([1, 3])
     
-    if update_btn:
-        # Validasi kalau user sengaja kosongkan kotak password
-        if not new_password.strip():
-            st.error("Kata laluan tidak boleh dibiarkan kosong!")
-            st.stop()
-
-        if gambar_baru is not None:
-            with st.spinner("Sedang memproses dan menyimpan gambar profil..."):
+    with col1:
+        avatar_default = "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+        url_gambar = pic_semasa if pic_semasa != "" else avatar_default
+        st.image(url_gambar, width=150, caption="Gambar Profil")
+        
+    with col2:
+        st.subheader(nama_semasa)
+        st.write(f"**Username:** {username_semasa}")
+        st.write(f"**Peranan (Role):** {rekod.get('Role', 'Member')}")
+        
+        # Paparan info kesihatan pantas di bahagian atas demi keselamatan kecemasan
+        c_darah, c_kesihatan = st.columns(2)
+        with c_darah:
+            st.write(f"🩸 **Kumpulan Darah:** `{darah_semasa}`")
+        with c_kesihatan:
+            status_kesihatan = f"`{kesihatan_semasa}`" if kesihatan_semasa else "*Tiada / Tiada Rekod*"
+            st.write(f"🏥 **Alergi / Kesihatan:** {status_kesihatan}")
+        
+    st.divider()
+    
+    # 4. Borang Kemaskini Profil Luas
+    st.subheader("⚙️ Kemaskini Maklumat Peribadi")
+    with st.form("form_kemaskini_profil"):
+        
+        # BAHAGIAN A: PERHUBUNGAN ASAS
+        st.write("### 📞 Maklumat Perhubungan")
+        edit_nama = st.text_input("Nama Penuh", value=nama_semasa)
+        edit_phone = st.text_input("Nombor Telefon Anda", value=phone_semasa)
+        
+        st.divider()
+        
+        # BAHAGIAN B: KECEMASAN & WARIS (DENGAN NAMA & DROPDOWN)
+        st.write("### 🚨 Maklumat Kecemasan & Waris")
+        edit_waris_nama = st.text_input("Nama Penuh Waris / Kenalan Kecemasan", value=waris_nama_semasa)
+        edit_emg = st.text_input("Nombor Telefon Waris / Kecemasan", value=emg_semasa)
+        
+        # Pilihan senarai hubungan waris mengikut rujukan dropdown
+        senarai_hubungan = ["Ibu", "Ayah", "Kakak", "Abang", "Adik", "Pasangan", "Saudara", "Lain-lain"]
+        idx_hubungan = senarai_hubungan.index(hubungan_semasa) if hubungan_semasa in senarai_hubungan else 0
+        edit_hubungan = st.selectbox("Hubungan dengan Waris tersebut:", senarai_hubungan, index=idx_hubungan)
+        
+        st.divider()
+        
+        # BAHAGIAN C: KESIHATAN KUMPULAN
+        st.write("### 🏥 Maklumat Kesihatan & Alergi")
+        senarai_darah = ["Tidak Pasti", "A", "B", "AB", "O"]
+        idx_darah = senarai_darah.index(darah_semasa) if darah_semasa in senarai_darah else 0
+        edit_darah = st.selectbox("Kumpulan Darah:", senarai_darah, index=idx_darah)
+        
+        edit_kesihatan = st.text_input(
+            "Alergi / Masalah Kesihatan / Pantang Larang (Jika Ada)", 
+            value=kesihatan_semasa, 
+            placeholder="Contoh: Alergi Kacang / Ada Asma / Tiada"
+        )
+        
+        st.divider()
+        
+        # BAHAGIAN D: GAMBAR & KESELAMATAN
+        st.write("### 🖼️ Gambar Profil & Kata Laluan")
+        st.markdown("*Sila muat naik gambar ke [Postimages.org](https://postimages.org/) jika mahu tukar gambar, kemudian tampal Direct Link di bawah.*")
+        edit_pic = st.text_input("Pautan (URL) Gambar Profil", value=pic_semasa)
+        edit_pass = st.text_input("Tukar Kata Laluan Baru", value=pass_semasa, type="password")
+        
+        # BUTANG SUBMIT
+        submit_profil = st.form_submit_button("Simpan & Kemaskini Profil")
+        
+        if submit_profil:
+            if not edit_nama or not edit_pass:
+                st.warning("Nama Penuh dan Kata Laluan tidak boleh dikosongkan!")
+            else:
+                # Masukkan semua data baru ke dalam baris DataFrame berkaitan
+                users_db.at[idx, 'Full_Name'] = edit_nama.strip()
+                users_db.at[idx, 'Phone_No'] = edit_phone.strip()
+                users_db.at[idx, 'Emergency_Name'] = edit_waris_nama.strip()
+                users_db.at[idx, 'Emergency_Contact'] = edit_emg.strip()
+                users_db.at[idx, 'Emergency_Relationship'] = edit_hubungan
+                users_db.at[idx, 'Blood_Type'] = edit_darah
+                users_db.at[idx, 'Medical_Condition'] = edit_kesihatan.strip()
+                users_db.at[idx, 'Profile_Pic_URL'] = edit_pic.strip()
+                users_db.at[idx, 'Password'] = edit_pass.strip()
+                
+                # Tolak data masuk ke Google Sheets secara terus
                 try:
-                    kod_gambar_base64 = proses_gambar_ke_base64(gambar_baru)
-                    users_db.at[user_index, 'Profile_Pic_URL'] = kod_gambar_base64
+                    conn.update(worksheet="Users", data=users_db)
+                    st.session_state['full_name'] = edit_nama.strip()
+                    
+                    st.success("Profil anda berjaya dikemaskini dengan selamat!")
+                    st.cache_data.clear()
+                    st.rerun()
                 except Exception as e:
-                    st.error(f"Gagal memproses gambar: {e}")
-                    st.stop()
-
-        # Kemaskini maklumat peribadi & Password baharu ke dalam DataFrame
-        users_db.at[user_index, 'Phone_No'] = str(new_phone).strip()
-        users_db.at[user_index, 'Emergency_Contact'] = str(new_emergency).strip()
-        users_db.at[user_index, 'Password'] = str(new_password).strip() # <--- Simpan password baru ke DataFrame
-        
-        # Hantar DataFrame yang telah dikemaskini terus ke Google Sheets
-        conn.update(worksheet="Users", data=users_db)
-        
-        st.success("Profil dan kata laluan anda berjaya dikemaskini!")
-        st.cache_data.clear()
-        st.rerun()
+                    st.error(f"Gagal menyimpan data ke Google Sheets: {e}")
+else:
+    st.error("Rekod akaun anda tidak dijumpai di pangkalan data. Sila hubungi Admin.")
