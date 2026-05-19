@@ -773,7 +773,7 @@ with col_kanan:
             .memory-slider {{
     position: relative;
     width: 100%;
-    height: 520px; /* UBAH TINGGI GAMBAR DESKTOP DI SINI */
+    height: 1020px; /* UBAH TINGGI GAMBAR DESKTOP DI SINI */
     overflow: hidden;
     touch-action: pan-y;
     background: rgba(0,0,0,0.26);
