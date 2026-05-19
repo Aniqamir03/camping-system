@@ -797,7 +797,7 @@ body {{
     }}
 
     .poster-slider {{
-        height: 300px;
+        height: 3220px;
         border-radius: 15px;
     }}
 
