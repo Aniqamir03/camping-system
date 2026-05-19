@@ -54,10 +54,16 @@ if not users_db.empty:
         avatar_map[u_row['Username']] = pic if pic != "" else avatar_default
 
 # --- 2. PAPARKAN SEJARAH SEMBANG (CHAT HISTORY) ---
-st.subheader("Bilik Sembang")
+# KITA BAGI NILAI AWAL SUPAYA TAK ERROR
+chat_semasa = pd.DataFrame() 
+
+# Tapis mesej yang berkaitan dengan trip ini sahaja
+if not chat_db.empty and 'ID_Trip' in chat_db.columns:
+    # Pastikan kolum adalah string sebelum proses
+    chat_db['ID_Trip'] = chat_db['ID_Trip'].astype(str).str.strip()
+    chat_semasa = chat_db[chat_db['ID_Trip'] == current_trip]
 
 # Kotak Sembang yang boleh di-scroll (Tinggi tetap 450px)
-# Kita letak satu "anchor" (marker) di bahagian paling bawah
 chat_container = st.container(height=450, border=True)
 
 with chat_container:
@@ -77,9 +83,9 @@ with chat_container:
                 st.write(text_mesej)
         
         # Marker untuk anchor "Ke Bawah"
-        st.empty() # Ini sebagai penanda bawah sekali
+        st.empty() 
     else:
-        st.info("ℹ️ Bilik sembang masih sunyi.")
+        st.info("ℹ️ Bilik sembang masih sunyi. Mulakan perbualan pertama anda di bawah!")
 
 # --- 3. BUTANG "KE BAWAH" & INPUT ---
 # Butang Jump to Bottom
