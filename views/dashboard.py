@@ -773,7 +773,7 @@ with col_kanan:
             .memory-slider {{
     position: relative;
     width: 100%;
-    height: 520px;
+    height: 520px; /* UBAH TINGGI GAMBAR DESKTOP DI SINI */
     overflow: hidden;
     touch-action: pan-y;
     background: rgba(0,0,0,0.26);
@@ -788,15 +788,15 @@ with col_kanan:
             }}
 
             .memory-slide img {{
-                width: 100%;
-                height: 100%;
-                object-fit: contain;
-                object-position: center;
-                display: block;
-                background: rgba(0,0,0,0.26);
-                transform: none;
-                animation: none;
-            }}
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* contain = gambar penuh, cover = gambar crop */
+    object-position: center;
+    display: block;
+    background: rgba(0,0,0,0.26);
+    transform: none;
+    animation: none;
+}}
 
             .memory-slide::after {{
                 content: "";
@@ -806,26 +806,11 @@ with col_kanan:
                 pointer-events: none;
             }}
 
-            .memory-nav {{
-                position: absolute;
-                top: 50%;
-                transform: translateY(-50%);
-                width: 38px;
-                height: 38px;
-                border-radius: 999px;
-                border: 1px solid rgba(255,255,255,0.24);
-                background: rgba(5,20,31,0.48);
-                color: white;
-                font-size: 24px;
-                line-height: 1;
-                cursor: pointer;
-                z-index: 5;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
-                transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+             .memory-nav {{
+        width: 34px;
+        height: 34px;
+        font-size: 21px;
+    }}
             }}
 
             .memory-nav:hover {{
@@ -879,9 +864,9 @@ with col_kanan:
             }}
 
             @media (max-width: 520px) {{
-                .memory-slider {{ height: 360px; }}
-                .memory-nav {{ width: 34px; height: 34px; font-size: 21px; }}
-            }}
+    .memory-slider {{
+        height: 360px; /* UBAH TINGGI GAMBAR MOBILE DI SINI */
+    }}
         </style>
 
         <script>
