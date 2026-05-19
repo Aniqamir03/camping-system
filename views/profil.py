@@ -19,7 +19,7 @@ if not username_semasa:
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 try:
-    users_db = conn.read(worksheet="Users", ttl=0)
+    users_db = conn.read(worksheet="Users", ttl=600)
 except Exception as e:
     st.error("⚠️ Ralat API: Tab 'Users' tidak dijumpai di dalam Google Sheets. Sila pastikan ejaannya tepat.")
     st.stop()
@@ -196,6 +196,7 @@ if not user_info.empty:
                     st.session_state['full_name'] = edit_nama.strip()
                     
                     st.success("Profil anda berjaya dikemaskini dengan imej baru!")
+                    # MAGIC REFRESH
                     st.cache_data.clear()
                     st.rerun()
                 except Exception as e:
