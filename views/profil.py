@@ -1,6 +1,9 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
+import io
+from PIL import Image
+import base64
 
 st.title("👤 Profil Saya")
 st.write("Kemaskini maklumat peribadi, kesihatan, dan nombor telefon kecemasan anda di sini.")
@@ -25,7 +28,7 @@ except Exception as e:
 for col in users_db.columns:
     users_db[col] = users_db[col].astype(str).replace('nan', '').replace('NaN', '').str.strip()
 
-# Pastikan semua kolum lama dan baharu wujud di dalam DataFrame sistem
+# Pastikan semua kolum lama dan baharu wujud
 kolum_wajib = [
     'Phone_No', 'Emergency_Name', 'Emergency_Contact', 'Emergency_Relationship', 
     'Blood_Type', 'Medical_Condition', 'Profile_Pic_URL', 'Password'
@@ -58,7 +61,7 @@ if not user_info.empty:
     with col1:
         avatar_default = "https://cdn-icons-png.flaticon.com/512/149/149071.png"
         
-        # --- PENAPIS IMEJ PINTAR (MENYELESAIKAN ATTRIBUTE ERROR) ---
+        # --- PENAPIS IMEJ PINTAR (Sokong URL & Base64) ---
         pic_semasa_str = str(pic_semasa).strip()
         if pic_semasa_str.startswith("http") or pic_semasa_str.startswith("data:image"):
             url_gambar = pic_semasa_str
@@ -68,7 +71,6 @@ if not user_info.empty:
         try:
             st.image(url_gambar, width=150, caption="Gambar Profil")
         except:
-            # Jika pautan nampak macam URL tapi sebenarnya 'broken link', fallback ke default
             st.image(avatar_default, width=150, caption="Gambar Default")
         # -------------------------------------------------------------
         
@@ -123,10 +125,18 @@ if not user_info.empty:
         
         st.divider()
         
-        # BAHAGIAN D: GAMBAR & KESELAMATAN
+        # BAHAGIAN D: GAMBAR & KESELAMATAN (DIUBAH KE UPLOAD TERUS)
         st.write("### 🖼️ Gambar Profil & Kata Laluan")
-        st.markdown("*Sila muat naik gambar ke [Postimages.org](https://postimages.org/) jika mahu tukar gambar, kemudian tampal Direct Link di bawah.*")
-        edit_pic = st.text_input("Pautan (URL) Gambar Profil", value=pic_semasa)
+        
+        # Tunjuk info kalau imej sedia ada guna Base64 (panjang gila)
+        if pic_semasa_str.startswith("data:image"):
+            st.info("💡 Anda sedang menggunakan gambar profil yang dimuat naik secara langsung.")
+        
+        # --- FUNGSI UPLOAD GAMBAR TERUS ---
+        # Kita pakai file_uploader menggantikan text_input
+        new_pic_file = st.file_uploader("📸 Muat Naik Gambar Profil Baru (JPG/JPEG/PNG)", type=['jpg', 'jpeg', 'png'])
+        # ----------------------------------
+        
         edit_pass = st.text_input("Tukar Kata Laluan Baru", value=pass_semasa, type="password")
         
         submit_profil = st.form_submit_button("Simpan & Kemaskini Profil")
@@ -135,6 +145,40 @@ if not user_info.empty:
             if not edit_nama or not edit_pass:
                 st.warning("Nama Penuh dan Kata Laluan tidak boleh dikosongkan!")
             else:
+                # --- PROSES FAIL GAMBAR KEPADA BASE64 (DENGAN RESIZING) ---
+                # Kekalkan gambar lama secara lalai
+                final_pic_data = pic_semasa 
+                
+                if new_pic_file is not None:
+                    try:
+                        # 1. Buka fail gambar
+                        image = Image.open(new_pic_file)
+                        
+                        # 2. KECILKAN SAIZ (DOWNSIZING) - PENTING UNTUK GSHEETS!
+                        # Kita thumbnail kan imej jadi max 200x200 pixel. 
+                        # Base64 ori phone boleh cecah 1MB+ (limit GSheets cell 50k char).
+                        # Downsized base64 biasanya bawah 20k char. Selamat.
+                        image.thumbnail((200, 200))
+                        
+                        # 3. Tukar balik jadi bytes
+                        buffered = io.BytesIO()
+                        # Simpan sebagai JPEG untuk compression, guna RGB kalau PNG rosak
+                        if image.mode in ("RGBA", "P"):
+                            image = image.convert("RGB")
+                        image.save(buffered, format="JPEG", quality=85) # Quality 85 balance size/look
+                        
+                        # 4. Encode jadi Base64 string
+                        img_str = base64.b64encode(buffered.getvalue()).decode()
+                        
+                        # 5. Tambah header required oleh st.image
+                        final_pic_data = f"data:image/jpeg;base64,{img_str}"
+                        
+                    except Exception as e:
+                        st.error(f"Gagal memproses fail imej: {e}")
+                        final_pic_data = pic_semasa # Pakai balik imej lama kalau error
+                # ----------------------------------------------------------
+                
+                # Masukkan data ke DataFrame
                 users_db.at[idx, 'Full_Name'] = edit_nama.strip()
                 users_db.at[idx, 'Phone_No'] = edit_phone.strip()
                 users_db.at[idx, 'Emergency_Name'] = edit_waris_nama.strip()
@@ -142,17 +186,21 @@ if not user_info.empty:
                 users_db.at[idx, 'Emergency_Relationship'] = edit_hubungan
                 users_db.at[idx, 'Blood_Type'] = edit_darah
                 users_db.at[idx, 'Medical_Condition'] = edit_kesihatan.strip()
-                users_db.at[idx, 'Profile_Pic_URL'] = edit_pic.strip()
+                
+                # Simpan teks Base64 atau URL lama ke dalam kolum Profile_Pic_URL
+                users_db.at[idx, 'Profile_Pic_URL'] = final_pic_data
                 users_db.at[idx, 'Password'] = edit_pass.strip()
                 
                 try:
                     conn.update(worksheet="Users", data=users_db)
                     st.session_state['full_name'] = edit_nama.strip()
                     
-                    st.success("Profil anda berjaya dikemaskini dengan selamat!")
+                    st.success("Profil anda berjaya dikemaskini dengan imej baru!")
                     st.cache_data.clear()
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Gagal menyimpan data ke Google Sheets: {e}")
+                    # Kalau fail terlalu besar, Google Sheets akan reject.
+                    # Kita dah resize ke 200px di atas, sepatutnya isu ni dah selesai.
+                    st.error(f"Gagal menyimpan data ke Google Sheets. Pastikan imej tidak terlalu besar. Ralat: {e}")
 else:
     st.error("Rekod akaun anda tidak dijumpai di pangkalan data. Sila hubungi Admin.")
