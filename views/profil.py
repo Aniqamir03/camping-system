@@ -160,33 +160,11 @@ div[data-testid="stError"] {
     padding: 0.72rem 1.35rem !important;
     background: linear-gradient(135deg, #0abf8a 0%, #00a6c8 52%, #0077b6 100%) !important;
     color: white !important;
+    -webkit-text-fill-color: white !important;
     font-weight: 800 !important;
     letter-spacing: 0 !important;
     box-shadow: 0 12px 30px rgba(10,191,138,0.28) !important;
     transition: transform 0.28s ease, box-shadow 0.28s ease, filter 0.28s ease !important;
-}
-
-/* FIX FILE UPLOADER LIGHT MODE */
-[data-testid="stFileUploader"] section button,
-[data-testid="stFileUploader"] section button *,
-[data-testid="stFileUploader"] button,
-[data-testid="stFileUploader"] button * {
-    color: #0f172a !important;
-    -webkit-text-fill-color: #0f172a !important;
-}
-
-[data-testid="stFileUploader"] section small,
-[data-testid="stFileUploader"] section span,
-[data-testid="stFileUploader"] section p,
-[data-testid="stFileUploader"] section div {
-    color: rgba(255,255,255,0.88) !important;
-    -webkit-text-fill-color: rgba(255,255,255,0.88) !important;
-}
-
-[data-testid="stFileUploader"] section button {
-    background: rgba(248,250,252,0.96) !important;
-    border: 1px solid rgba(255,255,255,0.28) !important;
-    border-radius: 8px !important;
 }
 
 .stButton > button:hover,
@@ -201,52 +179,13 @@ div[data-testid="stError"] {
     transform: translateY(0) scale(0.98) !important;
 }
 
-/* FIX LIGHT MODE INPUT TEXT */
-
-/* FIX DROPDOWN MENU TEXT */
-div[data-baseweb="popover"] {
-    background: #ffffff !important;
-}
-
-div[data-baseweb="popover"] ul,
-div[data-baseweb="popover"] li,
-div[data-baseweb="popover"] div,
-div[data-baseweb="popover"] span {
-    color: #0f172a !important;
-    -webkit-text-fill-color: #0f172a !important;
-}
-
-div[data-baseweb="menu"] {
-    background: #ffffff !important;
-    border-radius: 14px !important;
-    box-shadow: 0 18px 45px rgba(0,0,0,0.25) !important;
-}
-
-div[data-baseweb="menu"] ul,
-div[data-baseweb="menu"] li,
-div[data-baseweb="menu"] div,
-div[data-baseweb="menu"] span {
-    color: #0f172a !important;
-    -webkit-text-fill-color: #0f172a !important;
-}
-
-li[role="option"] {
-    background: #ffffff !important;
-    color: #0f172a !important;
-    -webkit-text-fill-color: #0f172a !important;
-}
-
-li[role="option"]:hover,
-li[role="option"][aria-selected="true"] {
-    background: rgba(10,191,138,0.14) !important;
-    color: #0f172a !important;
-    -webkit-text-fill-color: #0f172a !important;
-}
+/* INPUT + SELECT FIX */
 .stTextInput input,
 .stTextArea textarea,
 .stSelectbox [data-baseweb="select"],
 .stSelectbox [data-baseweb="select"] div,
-.stSelectbox [data-baseweb="select"] span {
+.stSelectbox [data-baseweb="select"] span,
+.stSelectbox [data-baseweb="select"] input {
     background: rgba(248,250,252,0.96) !important;
     color: #0f172a !important;
     -webkit-text-fill-color: #0f172a !important;
@@ -270,12 +209,6 @@ li[role="option"][aria-selected="true"] {
     opacity: 1 !important;
 }
 
-[data-testid="stFileUploader"] [role="button"] {
-    background: rgba(248,250,252,0.96) !important;
-    color: #0f172a !important;
-    -webkit-text-fill-color: #0f172a !important;
-}
-
 .stTextInput input:focus,
 .stTextArea textarea:focus {
     background: #ffffff !important;
@@ -294,6 +227,11 @@ li[role="option"][aria-selected="true"] {
     opacity: 1 !important;
 }
 
+.stSelectbox [data-baseweb="select"] svg {
+    color: #0f172a !important;
+    fill: #0f172a !important;
+}
+
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
@@ -301,12 +239,37 @@ input:-webkit-autofill:focus {
     box-shadow: 0 0 0px 1000px #ffffff inset !important;
 }
 
+/* DROPDOWN MENU FIX */
+div[data-baseweb="popover"] {
+    background: #ffffff !important;
+}
+
 div[data-baseweb="popover"],
-div[data-baseweb="popover"] * {
+div[data-baseweb="popover"] *,
+div[data-baseweb="menu"],
+div[data-baseweb="menu"] *,
+li[role="option"],
+li[role="option"] * {
     color: #0f172a !important;
     -webkit-text-fill-color: #0f172a !important;
 }
 
+div[data-baseweb="menu"] {
+    background: #ffffff !important;
+    border-radius: 14px !important;
+    box-shadow: 0 18px 45px rgba(0,0,0,0.25) !important;
+}
+
+li[role="option"] {
+    background: #ffffff !important;
+}
+
+li[role="option"]:hover,
+li[role="option"][aria-selected="true"] {
+    background: rgba(10,191,138,0.14) !important;
+}
+
+/* LABELS */
 .stTextInput label,
 .stTextArea label,
 .stSelectbox label,
@@ -316,21 +279,55 @@ div[data-baseweb="popover"] * {
     font-weight: 800 !important;
 }
 
+/* FILE UPLOADER FIX */
 [data-testid="stFileUploader"] section {
     background: rgba(255,255,255,0.075) !important;
-    border: 1px dashed rgba(10,191,138,0.42) !important;
+    border: 1px dashed rgba(10,191,138,0.55) !important;
     border-radius: 18px !important;
 }
 
 [data-testid="stFileUploader"] section:hover {
     background: rgba(10,191,138,0.10) !important;
-    border-color: rgba(10,191,138,0.70) !important;
+    border-color: rgba(10,191,138,0.82) !important;
 }
 
-[data-testid="stFileUploader"] section * {
-    color: rgba(255,255,255,0.88) !important;
+[data-testid="stFileUploader"] section div,
+[data-testid="stFileUploader"] section span,
+[data-testid="stFileUploader"] section small,
+[data-testid="stFileUploader"] section p {
+    color: rgba(255,255,255,0.90) !important;
+    -webkit-text-fill-color: rgba(255,255,255,0.90) !important;
 }
 
+[data-testid="stFileUploader"] button,
+[data-testid="stFileUploader"] section button,
+[data-testid="stFileUploader"] [role="button"] {
+    background: linear-gradient(135deg, #0abf8a 0%, #00a6c8 52%, #0077b6 100%) !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    min-height: 40px !important;
+    padding: 0.55rem 1.05rem !important;
+    font-weight: 800 !important;
+    box-shadow: 0 10px 24px rgba(10,191,138,0.30) !important;
+}
+
+[data-testid="stFileUploader"] button *,
+[data-testid="stFileUploader"] section button *,
+[data-testid="stFileUploader"] [role="button"] * {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+[data-testid="stFileUploader"] button:hover,
+[data-testid="stFileUploader"] section button:hover,
+[data-testid="stFileUploader"] [role="button"]:hover {
+    filter: brightness(1.08) saturate(1.08) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* LAYOUT */
 [data-testid="stHorizontalBlock"] {
     gap: 1rem !important;
     animation: fadeUp 0.7s ease both !important;
@@ -526,6 +523,13 @@ div[data-baseweb="popover"] * {
         width: 100% !important;
         min-height: 48px !important;
         font-size: 0.9rem !important;
+    }
+
+    [data-testid="stFileUploader"] button,
+    [data-testid="stFileUploader"] section button,
+    [data-testid="stFileUploader"] [role="button"] {
+        width: auto !important;
+        min-width: 120px !important;
     }
 
     .profile-hero {
