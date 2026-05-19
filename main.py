@@ -4,19 +4,20 @@ import pandas as pd
 
 st.set_page_config(page_title="Sistem Perkhemahan", layout="wide")
 
-# FUNGSI CACHE: Panggil Google Sheets sekali sahaja setiap 10 minit
+# FUNGSI CACHE: Panggil Google Sheets sekali sahaja setiap 10 minit untuk jimat API
 @st.cache_data(ttl=600)
 def get_senarai_trip():
     conn = st.connection("gsheets", type=GSheetsConnection)
     return conn.read(worksheet="Senarai_Trip", ttl=600)
 
+# Tetapan memori log masuk
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
     st.session_state["role"] = None
     st.session_state["username"] = ""
     st.session_state["full_name"] = ""
 
-# Daftarkan Muka Surat
+# Daftarkan Muka Surat (Pages)
 login_page = st.Page("views/login.py", title="Log Masuk", icon="🔐")
 dashboard_page = st.Page("views/dashboard.py", title="Dashboard", icon="🏕️")
 tentatif_page = st.Page("views/tentatif.py", title="Tentatif & Lokasi", icon="📅")
@@ -25,16 +26,17 @@ chat_page = st.Page("views/chat.py", title="Sembang Kumpulan", icon="💬")
 profil_page = st.Page("views/profil.py", title="Profil Saya", icon="👤")
 admin_page = st.Page("views/admin.py", title="Urus Ahli", icon="⚙️")
 
-# Kawalan Navigasi
+# Kawalan Navigasi (Siapa boleh nampak menu apa)
 if not st.session_state["logged_in"]:
     pg = st.navigation([login_page])
 else:
     nav_list = [dashboard_page, tentatif_page, kehadiran_page, chat_page, profil_page]
+    # Hanya Admin yang ada menu Urus Ahli
     if st.session_state["role"] == "Admin":
         nav_list.append(admin_page)
     pg = st.navigation(nav_list)
 
-# Sidebar
+# Paparan Sidebar (Untuk user yang dah log masuk)
 if st.session_state["logged_in"]:
     with st.sidebar:
         st.write("---")
@@ -54,8 +56,13 @@ if st.session_state["logged_in"]:
         
         st.write("---")
         if st.button("🚪 Log Keluar", use_container_width=True):
+            # Kosongkan semua memori bila user log keluar
             st.session_state["logged_in"] = False
-            st.cache_data.clear() # Kosongkan cache masa log keluar
+            st.session_state["role"] = None
+            st.session_state["username"] = ""
+            st.session_state["full_name"] = ""
+            st.cache_data.clear() 
             st.rerun()
 
+# Jalankan navigasi
 pg.run()
