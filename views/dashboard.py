@@ -312,13 +312,16 @@ div[data-testid="stWarning"] {
     animation: memoryFade 0.75s ease both;
 }
 
-.memory-slide img {
+.memory-slide img {{
     width: 100%;
     height: 100%;
-    object-fit: var(--memory-image-fit);
+    object-fit: contain;
+    object-position: center;
     display: block;
-    background: var(--memory-image-bg);
-}
+    background: rgba(0,0,0,0.26);
+    transform: none;
+    animation: none;
+}}
 
 .memory-slide::after {
     content: "";
@@ -768,12 +771,13 @@ with col_kanan:
             }}
 
             .memory-slider {{
-                position: relative;
-                width: 100%;
-                height: 480px;
-                overflow: hidden;
-                touch-action: pan-y;
-            }}
+    position: relative;
+    width: 100%;
+    height: 520px;
+    overflow: hidden;
+    touch-action: pan-y;
+    background: rgba(0,0,0,0.26);
+}}
 
             .memory-slide {{
                 display: none;
@@ -785,11 +789,13 @@ with col_kanan:
 
             .memory-slide img {{
                 width: 100%;
-                height: 700%;
-                object-fit: cover;
+                height: 100%;
+                object-fit: contain;
+                object-position: center;
                 display: block;
-                transform: scale(1.02);
-                animation: memoryZoom 4.5s ease-in-out both;
+                background: rgba(0,0,0,0.26);
+                transform: none;
+                animation: none;
             }}
 
             .memory-slide::after {{
