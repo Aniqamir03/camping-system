@@ -467,11 +467,18 @@ with col_yt_utama:
     if yt_embed:
         # Embed video dengan autoplay
         st.markdown(f"""
-        <iframe width="100%" height="250" src="{yt_embed}" 
-        title="YouTube video player" frameborder="0" 
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-        allowfullscreen style="border-radius:12px;"></iframe>
-        """, unsafe_allow_html=True)
+<div class="profile-card">
+    <div class="profile-avatar" style="border: 2.5px solid {warna}; box-shadow: 0 0 14px {warna}66;">
+        <img src="{url_gambar}">
+    </div>
+
+    <p class="profile-name">{r['Full_Name']}</p>
+
+    <span class="profile-status" style="background: {warna_bg}; color: {warna}; border: 1px solid {warna}55;">
+        {status_rsvp}
+    </span>
+</div>
+""", unsafe_allow_html=True)
     else:
         st.warning("Admin belum menetapkan pautan video YouTube untuk trip ini.")
 
