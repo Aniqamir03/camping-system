@@ -467,10 +467,10 @@ with col_yt_utama:
     if yt_embed:
         # Embed video dengan autoplay
         st.markdown(f"""
-<div class="profile-card">
-    <div class="profile-avatar" style="border: 2.5px solid {warna}; box-shadow: 0 0 14px {warna}66;">
-        <img src="{url_gambar}">
-    </div>
+    <div class="profile-card">
+        <div class="profile-avatar" style="border: 2.5px solid {warna}; box-shadow: 0 0 14px {warna}66;">
+            <img src="{url_gambar}">
+        </div>
 
     <p class="profile-name">{r['Full_Name']}</p>
 
