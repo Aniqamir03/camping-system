@@ -122,13 +122,284 @@ with col_profil_utama:
                     status_rsvp = r['Status']
                     warna = "#28a745" if status_rsvp == "Hadir" else "#dc3545" if status_rsvp == "Tidak Hadir" else "#ffc107" if status_rsvp == "Belum Pasti" else "#6c757d"
                     
-                    st.markdown(f"""
-                    <div style="text-align: center; padding: 10px; border: 1px solid #4d4d4d; border-radius: 10px; margin-bottom: 10px; background-color: rgba(255,255,255,0.05);">
-                        <img src="{url_gambar}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 50%; border: 2px solid {warna};">
-                        <p style="margin: 5px 0 3px 0; font-size: 12px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{r['Full_Name']}</p>
-                        <span style="background-color: {warna}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold; display: inline-block;">{status_rsvp}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.markdown("""
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+html, body, [class*="css"] {
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    scroll-behavior: smooth;
+}
+
+.stApp {
+    background:
+        radial-gradient(circle at top left, rgba(10,191,138,0.22), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(0,119,182,0.24), transparent 34%),
+        linear-gradient(135deg, #06131f 0%, #082539 45%, #063b48 100%) !important;
+    background-attachment: fixed !important;
+}
+
+.stApp::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 42px 42px;
+    pointer-events: none;
+    z-index: 0;
+    animation: bgFloat 18s ease-in-out infinite alternate;
+}
+
+.main .block-container {
+    max-width: 1180px !important;
+    padding: 2rem 1.2rem 3rem !important;
+}
+
+[data-testid="stSidebar"] {
+    background: rgba(5, 20, 31, 0.78) !important;
+    backdrop-filter: blur(24px) saturate(145%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(145%) !important;
+    border-right: 1px solid rgba(255,255,255,0.12) !important;
+}
+
+[data-testid="stSidebar"] * {
+    color: rgba(255,255,255,0.88) !important;
+}
+
+h1 {
+    font-size: clamp(1.65rem, 4vw, 2.45rem) !important;
+    font-weight: 800 !important;
+    line-height: 1.15 !important;
+    background: linear-gradient(135deg, #ffffff 0%, #9fffe0 45%, #39c9ff 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    letter-spacing: 0 !important;
+    animation: fadeDown 0.7s ease both !important;
+}
+
+h2, h3 {
+    color: rgba(255,255,255,0.95) !important;
+    font-weight: 700 !important;
+    letter-spacing: 0 !important;
+    animation: fadeDown 0.75s ease both !important;
+}
+
+p, .stMarkdown p, .stText p {
+    color: rgba(255,255,255,0.78) !important;
+}
+
+strong {
+    color: #ffffff !important;
+}
+
+hr {
+    border: none !important;
+    height: 1px !important;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent) !important;
+    margin: 1.6rem 0 !important;
+}
+
+[data-testid="stAlert"],
+[data-testid="stForm"],
+[data-testid="stMetric"],
+[data-testid="stExpander"],
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background: rgba(255,255,255,0.075) !important;
+    backdrop-filter: blur(20px) saturate(145%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(145%) !important;
+    border: 1px solid rgba(255,255,255,0.14) !important;
+    border-radius: 18px !important;
+    box-shadow:
+        0 18px 45px rgba(0,0,0,0.28),
+        inset 0 1px 0 rgba(255,255,255,0.10) !important;
+    animation: fadeUp 0.65s ease both !important;
+}
+
+[data-testid="stAlert"] {
+    color: rgba(255,255,255,0.92) !important;
+}
+
+div[data-testid="stInfo"] {
+    background: linear-gradient(135deg, rgba(10,191,138,0.16), rgba(0,119,182,0.12)) !important;
+    border: 1px solid rgba(10,191,138,0.36) !important;
+}
+
+div[data-testid="stSuccess"] {
+    background: linear-gradient(135deg, rgba(10,191,138,0.20), rgba(255,255,255,0.06)) !important;
+    border: 1px solid rgba(10,191,138,0.42) !important;
+}
+
+div[data-testid="stWarning"] {
+    background: linear-gradient(135deg, rgba(245,158,11,0.18), rgba(255,255,255,0.055)) !important;
+    border: 1px solid rgba(245,158,11,0.35) !important;
+}
+
+.stButton > button,
+[data-testid="stFormSubmitButton"] > button {
+    min-height: 46px !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    padding: 0.72rem 1.35rem !important;
+    background: linear-gradient(135deg, #0abf8a 0%, #00a6c8 52%, #0077b6 100%) !important;
+    color: white !important;
+    font-weight: 800 !important;
+    letter-spacing: 0 !important;
+    box-shadow: 0 12px 30px rgba(10,191,138,0.28) !important;
+    transition: transform 0.28s ease, box-shadow 0.28s ease, filter 0.28s ease !important;
+}
+
+.stButton > button:hover,
+[data-testid="stFormSubmitButton"] > button:hover {
+    transform: translateY(-3px) scale(1.015) !important;
+    filter: brightness(1.08) saturate(1.08) !important;
+    box-shadow: 0 18px 42px rgba(10,191,138,0.42) !important;
+}
+
+.stButton > button:active,
+[data-testid="stFormSubmitButton"] > button:active {
+    transform: translateY(0) scale(0.98) !important;
+}
+
+.stTextInput input,
+.stTextArea textarea,
+.stSelectbox [data-baseweb="select"] {
+    background: rgba(255,255,255,0.085) !important;
+    color: rgba(255,255,255,0.94) !important;
+    border: 1px solid rgba(255,255,255,0.16) !important;
+    border-radius: 14px !important;
+    min-height: 45px !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08) !important;
+    transition: border 0.25s ease, box-shadow 0.25s ease, background 0.25s ease !important;
+}
+
+.stTextInput input:focus,
+.stTextArea textarea:focus {
+    background: rgba(255,255,255,0.12) !important;
+    border-color: rgba(10,191,138,0.72) !important;
+    box-shadow: 0 0 0 4px rgba(10,191,138,0.16) !important;
+}
+
+.stTextInput label,
+.stTextArea label,
+.stSelectbox label {
+    color: rgba(255,255,255,0.72) !important;
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
+}
+
+[data-testid="stHorizontalBlock"] {
+    gap: 1rem !important;
+    animation: fadeUp 0.7s ease both !important;
+}
+
+.vega-embed,
+.vega-embed canvas {
+    background: transparent !important;
+    border-radius: 18px !important;
+}
+
+iframe {
+    border-radius: 18px !important;
+    box-shadow: 0 18px 45px rgba(0,0,0,0.34) !important;
+}
+
+::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.04);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(10,191,138,0.45);
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(10,191,138,0.7);
+}
+
+@keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-14px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bgFloat {
+    from { transform: translate3d(0,0,0); opacity: 0.7; }
+    to { transform: translate3d(-16px,10px,0); opacity: 1; }
+}
+
+@media (max-width: 768px) {
+    .main .block-container {
+        padding: 1rem 0.75rem 2.4rem !important;
+    }
+
+    h1 {
+        font-size: 1.55rem !important;
+    }
+
+    h2, h3 {
+        font-size: 1.08rem !important;
+    }
+
+    [data-testid="stHorizontalBlock"] {
+        flex-direction: column !important;
+        gap: 0.9rem !important;
+    }
+
+    [data-testid="stHorizontalBlock"] > div {
+        width: 100% !important;
+        min-width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+
+    [data-testid="stForm"] {
+        padding: 1rem !important;
+        border-radius: 16px !important;
+    }
+
+    .stButton > button,
+    [data-testid="stFormSubmitButton"] > button {
+        width: 100% !important;
+        min-height: 48px !important;
+        font-size: 0.9rem !important;
+    }
+
+    iframe {
+        height: 220px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .main .block-container {
+        padding-left: 0.65rem !important;
+        padding-right: 0.65rem !important;
+    }
+
+    h1 {
+        font-size: 1.35rem !important;
+    }
+
+    p {
+        font-size: 0.92rem !important;
+    }
+
+    iframe {
+        height: 200px !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
     else:
         st.info("Tiada ahli ditemui.")
 
