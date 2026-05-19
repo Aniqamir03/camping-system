@@ -122,7 +122,6 @@ with col_profil_utama:
                     status_rsvp = r['Status']
                     warna = "#28a745" if status_rsvp == "Hadir" else "#dc3545" if status_rsvp == "Tidak Hadir" else "#ffc107" if status_rsvp == "Belum Pasti" else "#6c757d"
                     
-                    # HTML yang telah dikemaskini dengan teks status RSVP
                     st.markdown(f"""
                     <div style="text-align: center; padding: 10px; border: 1px solid #4d4d4d; border-radius: 10px; margin-bottom: 10px; background-color: rgba(255,255,255,0.05);">
                         <img src="{url_gambar}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 50%; border: 2px solid {warna};">
@@ -229,20 +228,28 @@ if st.session_state["role"] == "Admin":
             else:
                 try:
                     info_pukal = conn.read(worksheet="Info_Kem", ttl=600)
-                    # Pastikan kolum wujud
-                    for col in ['Youtube_URL', 'Kenangan_1', 'Kenangan_2', 'Kenangan_3', 'Kenangan_4', 'Kenangan_5']:
-                        if col not in info_pukal.columns: info_pukal[col] = ""
+                    
+                    # PASTIKAN KOLUM WUJUD DAN DIPAKSA MENJADI STRING (KALIS RALAT FLOAT64)
+                    kolum_media = ['Youtube_URL', 'Kenangan_1', 'Kenangan_2', 'Kenangan_3', 'Kenangan_4', 'Kenangan_5']
+                    for col in kolum_media:
+                        if col not in info_pukal.columns: 
+                            info_pukal[col] = ""
+                        # Paksa kolum menjadi teks sebelum sumbat link!
+                        info_pukal[col] = info_pukal[col].astype(str).replace('nan', '')
                     
                     if current_trip in info_pukal['ID_Trip'].values:
                         idx = info_pukal.index[info_pukal['ID_Trip'] == current_trip][0]
-                        info_pukal.at[idx, 'Youtube_URL'] = in_yt.strip()
-                        info_pukal.at[idx, 'Kenangan_1'] = in_k1.strip()
-                        info_pukal.at[idx, 'Kenangan_2'] = in_k2.strip()
-                        info_pukal.at[idx, 'Kenangan_3'] = in_k3.strip()
-                        info_pukal.at[idx, 'Kenangan_4'] = in_k4.strip()
-                        info_pukal.at[idx, 'Kenangan_5'] = in_k5.strip()
+                        info_pukal.at[idx, 'Youtube_URL'] = str(in_yt).strip()
+                        info_pukal.at[idx, 'Kenangan_1'] = str(in_k1).strip()
+                        info_pukal.at[idx, 'Kenangan_2'] = str(in_k2).strip()
+                        info_pukal.at[idx, 'Kenangan_3'] = str(in_k3).strip()
+                        info_pukal.at[idx, 'Kenangan_4'] = str(in_k4).strip()
+                        info_pukal.at[idx, 'Kenangan_5'] = str(in_k5).strip()
+                        
                         conn.update(worksheet="Info_Kem", data=info_pukal)
                         st.success("Media dikemaskini!")
+                        
+                        # MAGIC REFRESH
                         st.cache_data.clear()
                         st.rerun()
                 except Exception as e:
