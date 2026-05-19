@@ -632,7 +632,7 @@ with col_kanan:
 
             .memory-slide img {{
                 width: 100%;
-                height: 200%;
+                height: 700%;
                 object-fit: cover;
                 display: block;
                 transform: scale(1.02);
