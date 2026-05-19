@@ -35,6 +35,7 @@ def inject_css():
 html, body, [class*="css"] {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
     scroll-behavior: smooth;
+    color-scheme: dark;
 }
 
 .stApp {
@@ -177,32 +178,73 @@ div[data-testid="stError"] {
     transform: translateY(0) scale(0.98) !important;
 }
 
+/* FIX LIGHT MODE INPUT TEXT */
+.stTextInput input,
+.stTextArea textarea,
+.stSelectbox [data-baseweb="select"],
+.stSelectbox [data-baseweb="select"] div,
+.stSelectbox [data-baseweb="select"] span {
+    background: rgba(248,250,252,0.96) !important;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    caret-color: #0f172a !important;
+}
+
 .stTextInput input,
 .stTextArea textarea,
 .stSelectbox [data-baseweb="select"] {
-    background: rgba(255,255,255,0.085) !important;
-    color: rgba(255,255,255,0.94) !important;
-    border: 1px solid rgba(255,255,255,0.16) !important;
+    border: 1px solid rgba(255,255,255,0.26) !important;
     border-radius: 14px !important;
     min-height: 45px !important;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.80), 0 10px 24px rgba(0,0,0,0.12) !important;
     transition: border 0.25s ease, box-shadow 0.25s ease, background 0.25s ease !important;
+}
+
+.stTextInput input::placeholder,
+.stTextArea textarea::placeholder {
+    color: #64748b !important;
+    -webkit-text-fill-color: #64748b !important;
+    opacity: 1 !important;
 }
 
 .stTextInput input:focus,
 .stTextArea textarea:focus {
-    background: rgba(255,255,255,0.12) !important;
-    border-color: rgba(10,191,138,0.72) !important;
-    box-shadow: 0 0 0 4px rgba(10,191,138,0.16) !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    border-color: rgba(10,191,138,0.82) !important;
+    box-shadow: 0 0 0 4px rgba(10,191,138,0.18), 0 12px 28px rgba(0,0,0,0.16) !important;
+}
+
+.stTextInput input:disabled,
+.stTextArea textarea:disabled,
+.stSelectbox [data-baseweb="select"][aria-disabled="true"] {
+    background: rgba(226,232,240,0.95) !important;
+    color: #334155 !important;
+    -webkit-text-fill-color: #334155 !important;
+    opacity: 1 !important;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #0f172a !important;
+    box-shadow: 0 0 0px 1000px #ffffff inset !important;
+}
+
+div[data-baseweb="popover"],
+div[data-baseweb="popover"] * {
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
 }
 
 .stTextInput label,
 .stTextArea label,
 .stSelectbox label,
 [data-testid="stFileUploader"] label {
-    color: rgba(255,255,255,0.76) !important;
+    color: rgba(255,255,255,0.78) !important;
     font-size: 0.82rem !important;
-    font-weight: 700 !important;
+    font-weight: 800 !important;
 }
 
 [data-testid="stFileUploader"] section {
@@ -214,6 +256,10 @@ div[data-testid="stError"] {
 [data-testid="stFileUploader"] section:hover {
     background: rgba(10,191,138,0.10) !important;
     border-color: rgba(10,191,138,0.70) !important;
+}
+
+[data-testid="stFileUploader"] section * {
+    color: rgba(255,255,255,0.88) !important;
 }
 
 [data-testid="stHorizontalBlock"] {
