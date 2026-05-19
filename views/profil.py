@@ -166,6 +166,29 @@ div[data-testid="stError"] {
     transition: transform 0.28s ease, box-shadow 0.28s ease, filter 0.28s ease !important;
 }
 
+/* FIX FILE UPLOADER LIGHT MODE */
+[data-testid="stFileUploader"] section button,
+[data-testid="stFileUploader"] section button *,
+[data-testid="stFileUploader"] button,
+[data-testid="stFileUploader"] button * {
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+}
+
+[data-testid="stFileUploader"] section small,
+[data-testid="stFileUploader"] section span,
+[data-testid="stFileUploader"] section p,
+[data-testid="stFileUploader"] section div {
+    color: rgba(255,255,255,0.88) !important;
+    -webkit-text-fill-color: rgba(255,255,255,0.88) !important;
+}
+
+[data-testid="stFileUploader"] section button {
+    background: rgba(248,250,252,0.96) !important;
+    border: 1px solid rgba(255,255,255,0.28) !important;
+    border-radius: 8px !important;
+}
+
 .stButton > button:hover,
 [data-testid="stFormSubmitButton"] > button:hover {
     transform: translateY(-3px) scale(1.015) !important;
