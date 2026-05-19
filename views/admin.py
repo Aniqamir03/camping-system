@@ -8,7 +8,7 @@ st.write("Urus ahli kumpulan perkhemahan dan pantau status profil mereka.")
 # 1. Sambung ke Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
 try:
-    users_db = conn.read(worksheet="Users", ttl=0)
+    users_db = conn.read(worksheet="Users", ttl=600)
 except Exception as e:
     st.error("Gagal membaca pangkalan data Users. Pastikan tab 'Users' wujud.")
     st.stop()
