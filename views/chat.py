@@ -424,11 +424,11 @@ try:
 except:
     pass
 
-st.title(f"💬 Sembang Kumpulan: {nama_trip_sembang}")
+st.title(f"💬 Group Chat: {nama_trip_sembang}")
 
 st.markdown(
     '<div class="chat-hero">'
-    '<div class="chat-hero-title">Ruang sembang kumpulan</div>'
+    '<div class="chat-hero-title">Ruang Chat bersama ahli</div>'
     '<div class="chat-hero-sub">Bincang persiapan, logistik, agihan tugasan, dan maklumat penting perkhemahan dalam satu tempat.</div>'
     '</div>',
     unsafe_allow_html=True
