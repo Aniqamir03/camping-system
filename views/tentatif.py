@@ -577,7 +577,7 @@ if maps_url == default_maps and lokasi_kem != default_lokasi:
 embed_map_url = f"https://maps.google.com/maps?q={lokasi_url}&output=embed"
 
 
-section_header("📍", "Info Tapak Perkhemahan", "LIVE")
+section_header("📍", "Info Lokasi Percutian", "LIVE")
 
 col1, col2 = st.columns(2)
 
