@@ -463,9 +463,7 @@ iframe {
         font-size: 0.9rem !important;
     }
 
-    iframe {
-        height: 260px !important;
-    }
+  
 }
 
 @media (max-width: 430px) {
@@ -919,7 +917,7 @@ showSlide(0);
 </html>
 """
 
-    components.html(html_kod, height=840, scrolling=False)
+    components.html(html_kod, height=900, scrolling=False)
 
 else:
     st.info("ℹ️ Belum ada poster jadual aktiviti untuk trip ini. Admin akan kemaskini sebentar lagi.")
