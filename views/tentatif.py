@@ -799,7 +799,7 @@ body {{
     }}
 
     .poster-slider {{
-        height: 720px;
+        height: 520px;
         border-radius: 15px;
     }}
 
