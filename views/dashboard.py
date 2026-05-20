@@ -696,7 +696,7 @@ with col_yt_utama:
 
 st.divider()
 
-st.subheader("📊 Rumusan Kehadiran & 📸 Kenang-Kenangan")
+st.subheader("📊 Rumusan Kehadiran")
 col_kiri, col_kanan = st.columns([1, 1.2])
 
 with col_kiri:
@@ -938,7 +938,7 @@ with col_kanan:
 
 st.divider()
 
-if st.button("🚀 Buka Halaman Pengesahan Kehadiran (RSVP)", use_container_width=True, type="primary"):
+if st.button("🚀 Buka Halaman Pengesahan Kehadiran", use_container_width=True, type="primary"):
     st.switch_page("views/kehadiran.py")
 
 if st.session_state.get("role", "") == "Admin":
