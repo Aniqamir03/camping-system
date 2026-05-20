@@ -22,6 +22,32 @@ def get_gdrive_folder_embed(url):
 st.title("🖼️ Galeri HD & Album Bersama")
 st.write("Ruang khas untuk berkongsi dan memuat turun gambar kenangan kualiti asal (High-Res) tanpa pecah.")
 
+# --- KOD OPTIMASI UI MOBILE (IPHONE 12 PRO MAX) ---
+st.markdown("""
+<style>
+/* Sasaran spesifik untuk skrin telefon pintar (iPhone 12 Pro Max max-width: 430px) */
+@media (max-width: 430px) {
+    /* 1. Buang ruang kosong (padding) kiri kanan supaya galeri guna 100% skrin */
+    .block-container {
+        padding-top: 1.5rem !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+    
+    /* 2. Besarkan ketinggian Iframe supaya pengguna tak perlu double-scroll */
+    iframe {
+        height: 750px !important;
+        border-radius: 8px !important;
+    }
+    
+    /* 3. Kecilkan saiz tajuk supaya tak makan ruang di mobile */
+    h1 {
+        font-size: 1.8rem !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
 # --- 1. TARIK DATA DARI GSHEETS ---
 try:
     info_db = conn.read(worksheet="Info_Kem", ttl=600)
