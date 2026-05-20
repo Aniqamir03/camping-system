@@ -541,254 +541,517 @@ with col_yt_utama:
 st.divider()
 
 st.subheader("📊 Rumusan Kehadiran & 📸 Kenang-Kenangan")
-col_kiri, col_kanan = st.columns([1, 1.2])
 
-with col_kiri:
-    if not merged_df.empty:
-        status_counts = merged_df['Status'].value_counts()
-        kategori_status = ['Hadir', 'Tidak Hadir', 'Belum Pasti', 'Belum Sahkan']
-        warna_status = ['#0abf8a', '#ef4444', '#f59e0b', '#6b7280']
+kategori_status = ["Hadir", "Tidak Hadir", "Belum Pasti", "Belum Sahkan"]
+warna_status = ["#0abf8a", "#ef4444", "#f59e0b", "#6b7280"]
 
-        df_pie = pd.DataFrame({
-            'Status': kategori_status,
-            'Jumlah': [int(status_counts.get(s, 0)) for s in kategori_status],
-            'Warna': warna_status
-        })
+if not merged_df.empty:
+    status_counts = merged_df["Status"].value_counts()
+else:
+    status_counts = pd.Series(dtype=int)
 
-        df_pie = df_pie[df_pie['Jumlah'] > 0]
+jumlah_status = [int(status_counts.get(s, 0)) for s in kategori_status]
+jumlah_semua = sum(jumlah_status)
 
-        if not df_pie.empty:
-            pie_chart = alt.Chart(df_pie).mark_arc(innerRadius=40).encode(
-                theta=alt.Theta(field="Jumlah", type="quantitative"),
-                color=alt.Color(
-                    field="Status",
-                    type="nominal",
-                    scale=alt.Scale(domain=kategori_status, range=warna_status),
-                    legend=alt.Legend(title="Status", labelColor="#ccc", titleColor="#ccc")
-                ),
-                tooltip=['Status', 'Jumlah']
-            ).properties(
-                width=280,
-                height=280
-            ).configure_view(
-                strokeWidth=0
-            ).configure(
-                background='transparent'
-            )
+if jumlah_semua > 0:
+    gradient_parts = []
+    mula = 0
 
-            st.altair_chart(pie_chart, use_container_width=True)
-        else:
-            st.write("Belum ada rekod.")
+    for label, jumlah, warna in zip(kategori_status, jumlah_status, warna_status):
+        peratus = (jumlah / jumlah_semua) * 100
+        tamat = mula + peratus
 
-with col_kanan:
-    if len(senarai_kenangan) > 0:
-        divs_gambar = "".join([
-            f"""
-            <div class="memory-slide">
-                <img src="{url}" alt="Kenangan trip">
-            </div>
-            """
-            for url in senarai_kenangan
-        ])
+        if jumlah > 0:
+            gradient_parts.append(f"{warna} {mula:.2f}% {tamat:.2f}%")
 
-        html_kod = f"""
-        <div class="memory-glass-wrap">
-            <div class="memory-slider" id="memorySlider">
-                {divs_gambar}
-                <button class="memory-nav memory-prev" onclick="memoryChangeSlide(-1)">‹</button>
-                <button class="memory-nav memory-next" onclick="memoryChangeSlide(1)">›</button>
-                <div class="memory-dots" id="memoryDots"></div>
+        mula = tamat
+
+    conic_gradient = ", ".join(gradient_parts)
+else:
+    conic_gradient = "rgba(107,114,128,0.55) 0% 100%"
+
+legend_html = "".join([
+    f"""
+    <div class="dash-legend-item">
+        <span class="dash-legend-dot" style="background:{warna};"></span>
+        <span class="dash-legend-label">{html_lib.escape(label, quote=False)}</span>
+        <span class="dash-legend-count">{jumlah}</span>
+    </div>
+    """
+    for label, jumlah, warna in zip(kategori_status, jumlah_status, warna_status)
+])
+
+if len(senarai_kenangan) > 0:
+    slides_html = "".join([
+        f"""
+        <div class="dash-memory-slide">
+            <img src="{html_lib.escape(url, quote=True)}" alt="Kenangan trip">
+        </div>
+        """
+        for url in senarai_kenangan
+    ])
+
+    dots_html = "".join([
+        f'<button class="dash-memory-dot" onclick="goToMemorySlide({i})" aria-label="Kenangan {i + 1}"></button>'
+        for i in range(len(senarai_kenangan))
+    ])
+else:
+    slides_html = """
+    <div class="dash-memory-empty">
+        <strong>Belum ada foto</strong>
+        <span>Admin boleh tambah gambar kenangan di panel media.</span>
+    </div>
+    """
+    dots_html = ""
+
+html_kod = f"""
+<div class="dash-summary-memory">
+    <section class="dash-panel dash-summary-panel">
+        <div class="dash-panel-head">
+            <span>📊</span>
+            <strong>Rumusan</strong>
+        </div>
+
+        <div class="dash-donut-wrap">
+            <div class="dash-donut" style="background: conic-gradient({conic_gradient});">
+                <div class="dash-donut-core">
+                    <strong>{jumlah_semua}</strong>
+                    <span>Ahli</span>
+                </div>
             </div>
         </div>
 
-        <style>
-            .memory-glass-wrap {{
-                width: 100%;
-                border-radius: 20px;
-                overflow: hidden;
-                position: relative;
-                background: rgba(255,255,255,0.08);
-                border: 1px solid rgba(255,255,255,0.16);
-                box-shadow: 0 18px 45px rgba(0,0,0,0.34);
-                backdrop-filter: blur(18px) saturate(145%);
-                -webkit-backdrop-filter: blur(18px) saturate(145%);
+        <div class="dash-legend">
+            {legend_html}
+        </div>
+    </section>
+
+    <section class="dash-panel dash-memory-panel">
+        <div class="dash-panel-head">
+            <span>📸</span>
+            <strong>Kenangan</strong>
+        </div>
+
+        <div class="dash-memory-slider" id="dashMemorySlider">
+            {slides_html}
+
+            <button class="dash-memory-nav dash-memory-prev" onclick="changeMemorySlide(-1)">‹</button>
+            <button class="dash-memory-nav dash-memory-next" onclick="changeMemorySlide(1)">›</button>
+
+            <div class="dash-memory-dots">
+                {dots_html}
+            </div>
+        </div>
+    </section>
+</div>
+
+<style>
+    * {{
+        box-sizing: border-box;
+    }}
+
+    body {{
+        margin: 0;
+        background: transparent;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }}
+
+    .dash-summary-memory {{
+        width: 100%;
+        display: grid;
+        grid-template-columns: minmax(155px, 0.82fr) minmax(205px, 1.18fr);
+        gap: 12px;
+        align-items: stretch;
+    }}
+
+    .dash-panel {{
+        min-width: 0;
+        min-height: 286px;
+        border-radius: 20px;
+        background: rgba(255,255,255,0.075);
+        border: 1px solid rgba(255,255,255,0.16);
+        box-shadow: 0 18px 45px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.10);
+        backdrop-filter: blur(18px) saturate(145%);
+        -webkit-backdrop-filter: blur(18px) saturate(145%);
+        overflow: hidden;
+    }}
+
+    .dash-summary-panel {{
+        padding: 13px;
+        display: flex;
+        flex-direction: column;
+    }}
+
+    .dash-memory-panel {{
+        padding: 13px;
+    }}
+
+    .dash-panel-head {{
+        height: 28px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        color: rgba(255,255,255,0.95);
+        font-size: 0.88rem;
+        font-weight: 800;
+        margin-bottom: 10px;
+    }}
+
+    .dash-donut-wrap {{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 2px 0 8px;
+    }}
+
+    .dash-donut {{
+        width: 145px;
+        aspect-ratio: 1 / 1;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        box-shadow: 0 14px 34px rgba(0,0,0,0.32);
+    }}
+
+    .dash-donut-core {{
+        width: 58%;
+        aspect-ratio: 1 / 1;
+        border-radius: 50%;
+        background: rgba(5,20,31,0.88);
+        border: 1px solid rgba(255,255,255,0.12);
+        display: grid;
+        place-items: center;
+        align-content: center;
+    }}
+
+    .dash-donut-core strong {{
+        color: white;
+        font-size: 1.22rem;
+        line-height: 1;
+    }}
+
+    .dash-donut-core span {{
+        color: rgba(255,255,255,0.60);
+        font-size: 0.66rem;
+        font-weight: 800;
+        margin-top: 2px;
+    }}
+
+    .dash-legend {{
+        display: grid;
+        gap: 6px;
+        margin-top: auto;
+    }}
+
+    .dash-legend-item {{
+        min-width: 0;
+        display: grid;
+        grid-template-columns: 10px 1fr auto;
+        align-items: center;
+        gap: 7px;
+        padding: 6px 8px;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.07);
+        border: 1px solid rgba(255,255,255,0.10);
+    }}
+
+    .dash-legend-dot {{
+        width: 9px;
+        height: 9px;
+        border-radius: 99px;
+    }}
+
+    .dash-legend-label {{
+        color: rgba(255,255,255,0.78);
+        font-size: 0.72rem;
+        font-weight: 800;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }}
+
+    .dash-legend-count {{
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 900;
+    }}
+
+    .dash-memory-slider {{
+        position: relative;
+        width: 100%;
+        height: 232px;
+        overflow: hidden;
+        border-radius: 16px;
+        background: rgba(0,0,0,0.24);
+        touch-action: pan-y;
+    }}
+
+    .dash-memory-slide {{
+        display: none;
+        position: relative;
+        width: 100%;
+        height: 100%;
+        animation: memoryFade 0.55s ease both;
+    }}
+
+    .dash-memory-slide img {{
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        display: block;
+        transform: none;
+        animation: none;
+    }}
+
+    .dash-memory-empty {{
+        height: 100%;
+        display: grid;
+        place-items: center;
+        align-content: center;
+        gap: 4px;
+        text-align: center;
+        padding: 16px;
+    }}
+
+    .dash-memory-empty strong {{
+        color: white;
+        font-size: 0.92rem;
+    }}
+
+    .dash-memory-empty span {{
+        color: rgba(255,255,255,0.62);
+        font-size: 0.78rem;
+        line-height: 1.35;
+    }}
+
+    .dash-memory-nav {{
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,0.22);
+        background: rgba(5,20,31,0.56);
+        color: white;
+        font-size: 22px;
+        line-height: 1;
+        cursor: pointer;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        transition: transform 0.22s ease, background 0.22s ease;
+    }}
+
+    .dash-memory-nav:hover {{
+        background: rgba(10,191,138,0.72);
+        transform: translateY(-50%) scale(1.07);
+    }}
+
+    .dash-memory-prev {{
+        left: 9px;
+    }}
+
+    .dash-memory-next {{
+        right: 9px;
+    }}
+
+    .dash-memory-dots {{
+        position: absolute;
+        left: 50%;
+        bottom: 9px;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 6px;
+        z-index: 6;
+        padding: 6px 8px;
+        border-radius: 999px;
+        background: rgba(5,20,31,0.36);
+        border: 1px solid rgba(255,255,255,0.12);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }}
+
+    .dash-memory-dot {{
+        width: 7px;
+        height: 7px;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.42);
+        cursor: pointer;
+        transition: width 0.25s ease, background 0.25s ease;
+    }}
+
+    .dash-memory-dot.active {{
+        width: 22px;
+        background: #0abf8a;
+    }}
+
+    @keyframes memoryFade {{
+        from {{ opacity: 0; transform: translateX(10px) scale(1.01); }}
+        to {{ opacity: 1; transform: translateX(0) scale(1); }}
+    }}
+
+    /* iPhone 12 Pro Max width lebih kurang 428px.
+       Layout ini kekalkan Rumusan + Kenangan bersebelahan. */
+    @media (max-width: 520px) {{
+        .dash-summary-memory {{
+            grid-template-columns: minmax(132px, 0.78fr) minmax(176px, 1.22fr);
+            gap: 8px;
+        }}
+
+        .dash-panel {{
+            min-height: 254px;
+            border-radius: 16px;
+        }}
+
+        .dash-summary-panel,
+        .dash-memory-panel {{
+            padding: 8px;
+        }}
+
+        .dash-panel-head {{
+            height: 24px;
+            font-size: 0.76rem;
+            gap: 5px;
+            margin-bottom: 7px;
+        }}
+
+        .dash-donut {{
+            width: 104px;
+        }}
+
+        .dash-donut-core strong {{
+            font-size: 0.98rem;
+        }}
+
+        .dash-donut-core span {{
+            font-size: 0.56rem;
+        }}
+
+        .dash-legend {{
+            gap: 4px;
+        }}
+
+        .dash-legend-item {{
+            grid-template-columns: 8px 1fr auto;
+            gap: 5px;
+            padding: 5px 6px;
+            border-radius: 10px;
+        }}
+
+        .dash-legend-dot {{
+            width: 7px;
+            height: 7px;
+        }}
+
+        .dash-legend-label {{
+            font-size: 0.58rem;
+        }}
+
+        .dash-legend-count {{
+            font-size: 0.62rem;
+        }}
+
+        .dash-memory-slider {{
+            height: 215px;
+            border-radius: 14px;
+        }}
+
+        .dash-memory-nav {{
+            width: 30px;
+            height: 30px;
+            font-size: 19px;
+        }}
+
+        .dash-memory-prev {{
+            left: 7px;
+        }}
+
+        .dash-memory-next {{
+            right: 7px;
+        }}
+    }}
+
+    @media (max-width: 360px) {{
+        .dash-summary-memory {{
+            grid-template-columns: 1fr;
+        }}
+
+        .dash-memory-slider {{
+            height: 230px;
+        }}
+    }}
+</style>
+
+<script>
+    let dashMemoryIndex = 0;
+    let dashMemoryTimer = null;
+
+    const dashSlides = document.querySelectorAll(".dash-memory-slide");
+    const dashDots = document.querySelectorAll(".dash-memory-dot");
+    const dashSlider = document.getElementById("dashMemorySlider");
+
+    function showDashMemorySlide(index) {{
+        if (!dashSlides.length) return;
+
+        dashSlides.forEach(slide => {{
+            slide.style.display = "none";
+        }});
+
+        dashDots.forEach(dot => {{
+            dot.classList.remove("active");
+        }});
+
+        dashMemoryIndex = (index + dashSlides.length) % dashSlides.length;
+        dashSlides[dashMemoryIndex].style.display = "block";
+
+        if (dashDots[dashMemoryIndex]) {{
+            dashDots[dashMemoryIndex].classList.add("active");
+        }}
+
+        clearTimeout(dashMemoryTimer);
+        dashMemoryTimer = setTimeout(() => {{
+            showDashMemorySlide(dashMemoryIndex + 1);
+        }}, 4200);
+    }}
+
+    function changeMemorySlide(direction) {{
+        clearTimeout(dashMemoryTimer);
+        showDashMemorySlide(dashMemoryIndex + direction);
+    }}
+
+    function goToMemorySlide(index) {{
+        clearTimeout(dashMemoryTimer);
+        showDashMemorySlide(index);
+    }}
+
+    let dashTouchStartX = 0;
+
+    if (dashSlider) {{
+        dashSlider.addEventListener("touchstart", function(event) {{
+            dashTouchStartX = event.touches[0].clientX;
+        }}, {{ passive: true }});
+
+        dashSlider.addEventListener("touchend", function(event) {{
+            const touchEndX = event.changedTouches[0].clientX;
+            const difference = dashTouchStartX - touchEndX;
+
+            if (Math.abs(difference) > 45) {{
+                changeMemorySlide(difference > 0 ? 1 : -1);
             }}
+        }});
+    }}
 
-            .memory-slider {{
-                position: relative;
-                width: 100%;
-                height: 290px;
-                overflow: hidden;
-                touch-action: pan-y;
-            }}
+    showDashMemorySlide(0);
+</script>
+"""
 
-            .memory-slide {{
-                display: none;
-                position: relative;
-                width: 100%;
-                height: 100%;
-                animation: memoryFade 0.75s ease both;
-            }}
-
-            .memory-slide img {{
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                display: block;
-                transform: scale(1.02);
-                animation: memoryZoom 4.5s ease-in-out both;
-            }}
-
-            .memory-slide::after {{
-                content: "";
-                position: absolute;
-                inset: 0;
-                background: linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.18) 60%, rgba(0,0,0,0.36));
-                pointer-events: none;
-            }}
-
-            .memory-nav {{
-                position: absolute;
-                top: 50%;
-                transform: translateY(-50%);
-                width: 38px;
-                height: 38px;
-                border-radius: 999px;
-                border: 1px solid rgba(255,255,255,0.24);
-                background: rgba(5,20,31,0.48);
-                color: white;
-                font-size: 24px;
-                line-height: 1;
-                cursor: pointer;
-                z-index: 5;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
-                transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
-            }}
-
-            .memory-nav:hover {{
-                background: rgba(10,191,138,0.72);
-                transform: translateY(-50%) scale(1.08);
-                box-shadow: 0 10px 28px rgba(10,191,138,0.32);
-            }}
-
-            .memory-prev {{ left: 12px; }}
-            .memory-next {{ right: 12px; }}
-
-            .memory-dots {{
-                position: absolute;
-                left: 50%;
-                bottom: 13px;
-                transform: translateX(-50%);
-                display: flex;
-                gap: 7px;
-                z-index: 6;
-                padding: 7px 9px;
-                border-radius: 999px;
-                background: rgba(5,20,31,0.34);
-                border: 1px solid rgba(255,255,255,0.14);
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
-            }}
-
-            .memory-dot {{
-                width: 8px;
-                height: 8px;
-                border-radius: 999px;
-                background: rgba(255,255,255,0.42);
-                cursor: pointer;
-                transition: width 0.28s ease, background 0.28s ease, transform 0.28s ease;
-            }}
-
-            .memory-dot.active {{
-                width: 24px;
-                background: #0abf8a;
-                transform: scale(1.03);
-            }}
-
-            @keyframes memoryFade {{
-                from {{ opacity: 0; transform: translateX(12px) scale(1.015); }}
-                to {{ opacity: 1; transform: translateX(0) scale(1); }}
-            }}
-
-            @keyframes memoryZoom {{
-                from {{ transform: scale(1.08); }}
-                to {{ transform: scale(1.02); }}
-            }}
-
-            @media (max-width: 520px) {{
-                .memory-slider {{ height: 230px; }}
-                .memory-nav {{ width: 34px; height: 34px; font-size: 21px; }}
-            }}
-        </style>
-
-        <script>
-            let memorySlideIndex = 0;
-            let memoryTimer = null;
-
-            const memorySlides = document.querySelectorAll(".memory-slide");
-            const memoryDotsBox = document.getElementById("memoryDots");
-            const memorySlider = document.getElementById("memorySlider");
-
-            memorySlides.forEach((_, index) => {{
-                const dot = document.createElement("span");
-                dot.className = "memory-dot";
-                dot.onclick = () => {{
-                    clearTimeout(memoryTimer);
-                    memoryShowSlide(index);
-                }};
-                memoryDotsBox.appendChild(dot);
-            }});
-
-            function memoryShowSlide(index) {{
-                if (!memorySlides.length) return;
-
-                memorySlides.forEach(slide => {{
-                    slide.style.display = "none";
-                }});
-
-                const dots = document.querySelectorAll(".memory-dot");
-                dots.forEach(dot => dot.classList.remove("active"));
-
-                memorySlideIndex = (index + memorySlides.length) % memorySlides.length;
-
-                memorySlides[memorySlideIndex].style.display = "block";
-                dots[memorySlideIndex].classList.add("active");
-
-                clearTimeout(memoryTimer);
-                memoryTimer = setTimeout(() => {{
-                    memoryShowSlide(memorySlideIndex + 1);
-                }}, 4200);
-            }}
-
-            function memoryChangeSlide(direction) {{
-                clearTimeout(memoryTimer);
-                memoryShowSlide(memorySlideIndex + direction);
-            }}
-
-            let memoryTouchStartX = 0;
-
-            memorySlider.addEventListener("touchstart", function(event) {{
-                memoryTouchStartX = event.touches[0].clientX;
-            }}, {{ passive: true }});
-
-            memorySlider.addEventListener("touchend", function(event) {{
-                const touchEndX = event.changedTouches[0].clientX;
-                const difference = memoryTouchStartX - touchEndX;
-
-                if (Math.abs(difference) > 45) {{
-                    memoryChangeSlide(difference > 0 ? 1 : -1);
-                }}
-            }});
-
-            memoryShowSlide(0);
-        </script>
-        """
-
-        components.html(html_kod, height=320)
+components.html(html_kod, height=310)
     else:
         st.info("Ruangan memori kosong.")
 
