@@ -166,25 +166,35 @@ if len(senarai_media) > 0:
         </div>
         """
     
-    # CSS Kesayangan Anda (Ditambah sikit gaya untuk badge video)
+    # CSS Kesayangan Anda (Ditambah Kunci Skrol)
     grid_css = f"""
     <style>
+        /* KUNCI MATI SCROLL KE TEPI UNTUK KESELURUHAN APP */
+        html, body, [data-testid="stAppViewContainer"], .block-container {{
+            overflow-x: hidden !important;
+            max-width: 100vw !important;
+        }}
+
         .insta-grid {{
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            /* FUNGSI AJAIB: minmax(0, 1fr) memaksa gambar mengecil fit skrin! */
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 3px;
             width: 100%;
+            box-sizing: border-box;
         }}
         .media-item {{
             position: relative;
             width: 100%;
             aspect-ratio: 1 / 1;
+            overflow: hidden;
+            border-radius: 4px;
         }}
         .media-item img {{
             width: 100%;
             height: 100%;
             object-fit: cover;
-            border-radius: 4px;
+            display: block;
         }}
         .video-badge {{
             position: absolute;
@@ -202,8 +212,8 @@ if len(senarai_media) > 0:
         @media (max-width: 430px) {{
             .block-container {{
                 padding-top: 1rem !important;
-                padding-left: 0.2rem !important;
-                padding-right: 0.2rem !important;
+                padding-left: 0.1rem !important;
+                padding-right: 0.1rem !important;
             }}
             h1, p {{ margin-left: 10px; }}
         }}
