@@ -696,7 +696,7 @@ with col_yt_utama:
 
 st.divider()
 
-st.subheader("📊 Rumusan Kehadiran dan Foto Kenang-Kenangan")
+st.subheader("📊 Rumusan Kehadiran & 📸 Kenang-Kenangan")
 col_kiri, col_kanan = st.columns([1, 1.2])
 
 with col_kiri:
