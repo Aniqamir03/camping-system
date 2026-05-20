@@ -900,7 +900,7 @@ showSlide(0);
 </body>
 </html>
 """
-    components.html(html_kod, height=660, scrolling=False)
+    components.html(html_kod, height=960, scrolling=False)
 
 else:
     st.info("ℹ️ Belum ada poster jadual aktiviti untuk trip ini. Admin akan kemaskini sebentar lagi.")
