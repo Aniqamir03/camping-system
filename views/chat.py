@@ -429,7 +429,7 @@ st.title(f"💬 Group Chat: {nama_trip_sembang}")
 st.markdown(
     '<div class="chat-hero">'
     '<div class="chat-hero-title">Ruang Chat bersama ahli</div>'
-    '<div class="chat-hero-sub">Bincang persiapan, logistik, agihan tugasan, dan maklumat penting perkhemahan dalam satu tempat.</div>'
+    '<div class="chat-hero-sub">Bincang persiapan, logistik, agihan tugasan, dan maklumat penting percutian dalam satu tempat.</div>'
     '</div>',
     unsafe_allow_html=True
 )
@@ -529,7 +529,7 @@ if (shell) {
 if st.button("👇 Ke Mesej Terkini"):
     st.rerun()
 
-mesej_baru = st.chat_input("Tulis mesej anda di sini...")
+mesej_baru = st.chat_input("Type...")
 
 if mesej_baru:
     if not current_trip:
