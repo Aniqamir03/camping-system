@@ -2,12 +2,11 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
-import altair as alt
 import streamlit.components.v1 as components
 import re
 import html as html_lib
 
-current_trip = st.session_state.get('current_trip_id', '')
+current_trip = st.session_state.get("current_trip_id", "")
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 st.markdown("""
@@ -154,15 +153,6 @@ div[data-testid="stWarning"] {
     border: 1px solid rgba(255,255,255,0.16) !important;
     border-radius: 14px !important;
     min-height: 45px !important;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08) !important;
-    transition: border 0.25s ease, box-shadow 0.25s ease, background 0.25s ease !important;
-}
-
-.stTextInput input:focus,
-.stTextArea textarea:focus {
-    background: rgba(255,255,255,0.12) !important;
-    border-color: rgba(10,191,138,0.72) !important;
-    box-shadow: 0 0 0 4px rgba(10,191,138,0.16) !important;
 }
 
 .stTextInput label,
@@ -259,15 +249,12 @@ div[data-testid="stWarning"] {
     animation: fadeUp 0.65s ease both;
 }
 
-.vega-embed,
-.vega-embed canvas {
-    background: transparent !important;
+.video-glass-card iframe {
+    width: 100% !important;
+    height: 250px !important;
+    border: 0 !important;
+    display: block !important;
     border-radius: 18px !important;
-}
-
-iframe {
-    border-radius: 18px !important;
-    box-shadow: 0 18px 45px rgba(0,0,0,0.34) !important;
 }
 
 ::-webkit-scrollbar {
@@ -354,7 +341,7 @@ iframe {
         font-size: 0.9rem !important;
     }
 
-    iframe {
+    .video-glass-card iframe {
         height: 220px !important;
     }
 }
@@ -389,22 +376,27 @@ iframe {
 
 
 def get_yt_embed_url(url):
-    if not url or url == 'nan':
+    if not url or url == "nan":
         return None
+
     video_id_match = re.search(r"(?:v=|\/)([0-9A-Za-z_-]{11}).*", url)
+
     if video_id_match:
         video_id = video_id_match.group(1)
         return f"https://www.youtube.com/embed/{video_id}?autoplay=1&mute=1&loop=1&playlist={video_id}"
+
     return None
 
 
 try:
     senarai_trip = conn.read(worksheet="Senarai_Trip", ttl=600)
+
     if not senarai_trip.empty and current_trip:
-        trip_info = senarai_trip[senarai_trip['ID_Trip'] == current_trip]
+        trip_info = senarai_trip[senarai_trip["ID_Trip"] == current_trip]
+
         if not trip_info.empty:
-            nama_trip = trip_info.iloc[0]['Nama_Trip']
-            tarikh_str = str(trip_info.iloc[0]['Tarikh'])
+            nama_trip = trip_info.iloc[0]["Nama_Trip"]
+            tarikh_str = str(trip_info.iloc[0]["Tarikh"])
         else:
             nama_trip = "Aktiviti Semasa"
             tarikh_str = ""
@@ -418,7 +410,7 @@ except:
 st.title(f"🏕️ Papan Pemuka - {nama_trip}")
 st.write(f"Selamat Datang, **{st.session_state.get('full_name', 'Pengguna')}**! Pantau profil dan kehadiran penuh ahli kumpulan di bawah.")
 
-if tarikh_str and tarikh_str.lower() != 'nan':
+if tarikh_str and tarikh_str.lower() != "nan":
     try:
         tarikh_kem = pd.to_datetime(tarikh_str).to_pydatetime()
         hari_ini = datetime.now()
@@ -440,14 +432,15 @@ k1, k2, k3, k4, k5 = "", "", "", "", ""
 
 try:
     info_db = conn.read(worksheet="Info_Kem", ttl=600)
-    if not info_db.empty and current_trip in info_db['ID_Trip'].values:
-        info_semasa = info_db[info_db['ID_Trip'] == current_trip].iloc[0]
-        yt_url_raw = str(info_semasa.get('Youtube_URL', '')).replace('nan', '').strip()
-        k1 = str(info_semasa.get('Kenangan_1', '')).replace('nan', '').strip()
-        k2 = str(info_semasa.get('Kenangan_2', '')).replace('nan', '').strip()
-        k3 = str(info_semasa.get('Kenangan_3', '')).replace('nan', '').strip()
-        k4 = str(info_semasa.get('Kenangan_4', '')).replace('nan', '').strip()
-        k5 = str(info_semasa.get('Kenangan_5', '')).replace('nan', '').strip()
+
+    if not info_db.empty and current_trip in info_db["ID_Trip"].values:
+        info_semasa = info_db[info_db["ID_Trip"] == current_trip].iloc[0]
+        yt_url_raw = str(info_semasa.get("Youtube_URL", "")).replace("nan", "").strip()
+        k1 = str(info_semasa.get("Kenangan_1", "")).replace("nan", "").strip()
+        k2 = str(info_semasa.get("Kenangan_2", "")).replace("nan", "").strip()
+        k3 = str(info_semasa.get("Kenangan_3", "")).replace("nan", "").strip()
+        k4 = str(info_semasa.get("Kenangan_4", "")).replace("nan", "").strip()
+        k5 = str(info_semasa.get("Kenangan_5", "")).replace("nan", "").strip()
 except:
     pass
 
@@ -455,25 +448,27 @@ senarai_kenangan = [k for k in [k1, k2, k3, k4, k5] if k != ""]
 
 try:
     users_db = conn.read(worksheet="Users", ttl=600)
+
     for col in users_db.columns:
-        users_db[col] = users_db[col].astype(str).replace('nan', '').str.strip()
-    users_member = users_db[users_db['Role'].str.lower() == 'member']
+        users_db[col] = users_db[col].astype(str).replace("nan", "").str.strip()
+
+    users_member = users_db[users_db["Role"].str.lower() == "member"]
 except:
     users_member = pd.DataFrame()
 
 try:
     kehadiran_db = conn.read(worksheet="Kehadiran", ttl=600)
-    kehadiran_semasa = kehadiran_db[kehadiran_db['ID_Trip'] == current_trip]
+    kehadiran_semasa = kehadiran_db[kehadiran_db["ID_Trip"] == current_trip]
 except:
     kehadiran_semasa = pd.DataFrame()
 
 if not users_member.empty:
-    if not kehadiran_semasa.empty and all(col in kehadiran_semasa.columns for col in ['Username', 'Status']):
-        merged_df = pd.merge(users_member, kehadiran_semasa[['Username', 'Status']], on='Username', how='left')
-        merged_df['Status'] = merged_df['Status'].fillna('Belum Sahkan')
+    if not kehadiran_semasa.empty and all(col in kehadiran_semasa.columns for col in ["Username", "Status"]):
+        merged_df = pd.merge(users_member, kehadiran_semasa[["Username", "Status"]], on="Username", how="left")
+        merged_df["Status"] = merged_df["Status"].fillna("Belum Sahkan")
     else:
         merged_df = users_member.copy()
-        merged_df['Status'] = 'Belum Sahkan'
+        merged_df["Status"] = "Belum Sahkan"
 else:
     merged_df = pd.DataFrame()
 
@@ -494,14 +489,15 @@ with col_profil_utama:
         profile_cards = []
 
         for _, r in merged_df.iterrows():
-            url_gambar = str(r.get('Profile_Pic_URL', '')).strip()
+            url_gambar = str(r.get("Profile_Pic_URL", "")).strip()
+
             if url_gambar == "":
                 url_gambar = avatar_default
 
-            status_rsvp = str(r.get('Status', 'Belum Sahkan')).strip()
+            status_rsvp = str(r.get("Status", "Belum Sahkan")).strip()
             warna, warna_bg = warna_map.get(status_rsvp, ("#6b7280", "rgba(107,114,128,0.15)"))
 
-            nama_safe = html_lib.escape(str(r.get('Full_Name', 'Tanpa Nama')), quote=False)
+            nama_safe = html_lib.escape(str(r.get("Full_Name", "Tanpa Nama")), quote=False)
             status_safe = html_lib.escape(status_rsvp, quote=False)
             url_safe = html_lib.escape(url_gambar, quote=True)
 
@@ -516,7 +512,7 @@ with col_profil_utama:
             )
 
         st.markdown(
-            '<div class="profile-grid">' + ''.join(profile_cards) + '</div>',
+            '<div class="profile-grid">' + "".join(profile_cards) + "</div>",
             unsafe_allow_html=True
         )
     else:
@@ -529,10 +525,10 @@ with col_yt_utama:
     if yt_embed:
         st.markdown(f"""
 <div class="video-glass-card">
-    <iframe width="100%" height="250" src="{yt_embed}"
+    <iframe src="{yt_embed}"
     title="YouTube video player" frameborder="0"
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-    allowfullscreen style="display:block;"></iframe>
+    allowfullscreen></iframe>
 </div>
 """, unsafe_allow_html=True)
     else:
@@ -557,7 +553,7 @@ if jumlah_semua > 0:
     gradient_parts = []
     mula = 0
 
-    for label, jumlah, warna in zip(kategori_status, jumlah_status, warna_status):
+    for jumlah, warna in zip(jumlah_status, warna_status):
         peratus = (jumlah / jumlah_semua) * 100
         tamat = mula + peratus
 
@@ -896,8 +892,6 @@ html_kod = f"""
         to {{ opacity: 1; transform: translateX(0) scale(1); }}
     }}
 
-    /* iPhone 12 Pro Max width lebih kurang 428px.
-       Layout ini kekalkan Rumusan + Kenangan bersebelahan. */
     @media (max-width: 520px) {{
         .dash-summary-memory {{
             grid-template-columns: minmax(132px, 0.78fr) minmax(176px, 1.22fr);
@@ -1051,9 +1045,7 @@ html_kod = f"""
 </script>
 """
 
-    components.html(html_kod, height=310)
-    else:
-        st.info("Ruangan memori kosong.")
+components.html(html_kod, height=310)
 
 st.divider()
 
@@ -1084,20 +1076,22 @@ if st.session_state.get("role", "") == "Admin":
                 try:
                     info_pukal = conn.read(worksheet="Info_Kem", ttl=600)
 
-                    kolum_media = ['Youtube_URL', 'Kenangan_1', 'Kenangan_2', 'Kenangan_3', 'Kenangan_4', 'Kenangan_5']
+                    kolum_media = ["Youtube_URL", "Kenangan_1", "Kenangan_2", "Kenangan_3", "Kenangan_4", "Kenangan_5"]
+
                     for col in kolum_media:
                         if col not in info_pukal.columns:
                             info_pukal[col] = ""
-                        info_pukal[col] = info_pukal[col].astype(str).replace('nan', '')
 
-                    if current_trip in info_pukal['ID_Trip'].values:
-                        idx = info_pukal.index[info_pukal['ID_Trip'] == current_trip][0]
-                        info_pukal.at[idx, 'Youtube_URL'] = str(in_yt).strip()
-                        info_pukal.at[idx, 'Kenangan_1'] = str(in_k1).strip()
-                        info_pukal.at[idx, 'Kenangan_2'] = str(in_k2).strip()
-                        info_pukal.at[idx, 'Kenangan_3'] = str(in_k3).strip()
-                        info_pukal.at[idx, 'Kenangan_4'] = str(in_k4).strip()
-                        info_pukal.at[idx, 'Kenangan_5'] = str(in_k5).strip()
+                        info_pukal[col] = info_pukal[col].astype(str).replace("nan", "")
+
+                    if current_trip in info_pukal["ID_Trip"].values:
+                        idx = info_pukal.index[info_pukal["ID_Trip"] == current_trip][0]
+                        info_pukal.at[idx, "Youtube_URL"] = str(in_yt).strip()
+                        info_pukal.at[idx, "Kenangan_1"] = str(in_k1).strip()
+                        info_pukal.at[idx, "Kenangan_2"] = str(in_k2).strip()
+                        info_pukal.at[idx, "Kenangan_3"] = str(in_k3).strip()
+                        info_pukal.at[idx, "Kenangan_4"] = str(in_k4).strip()
+                        info_pukal.at[idx, "Kenangan_5"] = str(in_k5).strip()
 
                         conn.update(worksheet="Info_Kem", data=info_pukal)
                         st.success("Media dikemaskini!")
