@@ -30,10 +30,10 @@ if "current_trip_id" not in st.session_state:
 login_page = st.Page("views/login.py", title="Log Masuk", icon="🔐")
 dashboard_page = st.Page("views/dashboard.py", title="Dashboard", icon="🏕️")
 tentatif_page = st.Page("views/tentatif.py", title="Tentatif & Lokasi", icon="📅")
-kehadiran_page = st.Page("views/kehadiran.py", title="Pengesahan Kehadiran", icon="📝")
+kehadiran_page = st.Page("views/kehadiran.py", title="Kehadiran", icon="📝")
 galeri_page = st.Page("views/galeri.py", title="Galeri", icon="🖼️")
-chat_page = st.Page("views/chat.py", title="Sembang Kumpulan", icon="💬")
-profil_page = st.Page("views/profil.py", title="Profil Saya", icon="👤")
+chat_page = st.Page("views/chat.py", title="Group Chat", icon="💬")
+profil_page = st.Page("views/profil.py", title="Profil", icon="👤")
 admin_page = st.Page("views/admin.py", title="Urus Ahli", icon="⚙️")
 
 
