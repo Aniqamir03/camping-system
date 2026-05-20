@@ -37,40 +37,55 @@ def get_folder_id(url_folder):
     if match: return match.group(1)
     return None
 
-# --- 3. FUNGSI SEDUT MEDIA DARI GDRIVE (GODAM SEMUA FORMAT FAIL) ---
+# --- 3. FUNGSI SEDUT MEDIA (VAKUM TURBO - PAKSA KELUARKAN SEMUA) ---
 @st.cache_data(ttl=300)
 def dapatkan_media_dari_folder(url_folder):
     folder_id = get_folder_id(url_folder)
     if not folder_id or not drive_service: return []
     
+    senarai_media = []
+    page_token = None
+    
     try:
-        # PENTING: Kita sedut SEMUA fail (kecuali sub-folder) supaya fail iPhone (HEIC/Octet) tak tertinggal!
-        query = f"'{folder_id}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed = false"
-        results = drive_service.files().list(
-            q=query, 
-            fields="files(id, thumbnailLink, mimeType)", 
-            pageSize=1000 
-        ).execute()
-        
-        items = results.get('files', [])
-        senarai_media = []
-        for item in items:
-            # Jika Google lambat bagi thumbnail, kita paksa guna API pembina link direct!
-            link_gambar = item.get('thumbnailLink', '')
-            if link_gambar:
-                link_gambar = link_gambar.replace('=s220', '=s800')
-            else:
-                link_gambar = f"https://drive.google.com/thumbnail?id={item['id']}&sz=w800"
+        # Loop ini akan paksa API pusing berkali-kali selagi ada gambar yang belum keluar
+        while True:
+            query = f"'{folder_id}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed = false"
+            results = drive_service.files().list(
+                q=query, 
+                fields="nextPageToken, files(id, thumbnailLink, mimeType)", 
+                pageSize=1000,
+                pageToken=page_token,
+                orderBy="createdTime desc" # Susun gambar paling baru kat atas
+            ).execute()
+            
+            items = results.get('files', [])
+            
+            for item in items:
+                try:
+                    # Proses setiap gambar dengan teliti supaya tak ada yang tercicir
+                    link_gambar = item.get('thumbnailLink', '')
+                    if link_gambar:
+                        link_gambar = link_gambar.replace('=s220', '=s800')
+                    else:
+                        link_gambar = f"https://drive.google.com/thumbnail?id={item['id']}&sz=w800"
 
-            senarai_media.append({
-                'id': item['id'],
-                'link': link_gambar,
-                'is_video': 'video' in str(item.get('mimeType', '')).lower(),
-                'view_link': f"https://drive.google.com/file/d/{item['id']}/view?usp=drivesdk"
-            })
+                    senarai_media.append({
+                        'id': item['id'],
+                        'link': link_gambar,
+                        'is_video': 'video' in str(item.get('mimeType', '')).lower(),
+                        'view_link': f"https://drive.google.com/file/d/{item['id']}/view?usp=drivesdk"
+                    })
+                except:
+                    continue # Kalau 1 fail rosak, dia takkan sekat fail lain
+            
+            # Semak jika masih ada baki gambar di awan
+            page_token = results.get('nextPageToken')
+            if not page_token:
+                break
+                
         return senarai_media
     except Exception as e:
-        return []
+        return senarai_media
 
 # --- 4. FUNGSI UPLOAD & DELETE MENGGUNAKAN APPS SCRIPT ---
 def muat_naik_ke_gdrive(fail_buffer, nama_fail, jenis_mime, folder_id):
@@ -144,7 +159,6 @@ if folder_id_semasa:
                 status_text.text("Selesai!")
                 st.success(f"Berjaya memuat naik {berjaya} fail media!")
                 
-                # Cuci cache paksaan
                 dapatkan_media_dari_folder.clear()
                 st.rerun()
             else:
@@ -161,7 +175,6 @@ if st.button("🔄 Segerakkan (Sync) Galeri", use_container_width=True, type="se
     st.rerun()
 
 if len(senarai_media) > 0:
-    # Membina struktur HTML yang bersih
     html_content = ""
     for item in senarai_media:
         badge_video = '<div class="video-badge">🎥</div>' if item['is_video'] else ''
@@ -174,7 +187,6 @@ if len(senarai_media) > 0:
         </div>
         """
     
-    # CSS Kesayangan Anda (Ditambah Kunci Skrol)
     grid_css = f"""
     <style>
         /* KUNCI MATI SCROLL KE TEPI UNTUK KESELURUHAN APP */
@@ -185,7 +197,6 @@ if len(senarai_media) > 0:
 
         .insta-grid {{
             display: grid;
-            /* FUNGSI AJAIB: minmax(0, 1fr) memaksa gambar mengecil fit skrin! */
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 3px;
             width: 100%;
@@ -238,7 +249,6 @@ if user_role == "Admin":
     st.write("---")
     st.subheader("⚙️ Panel Pengurusan (Admin Sahaja)")
     
-    # Bahagian 1: Padam Gambar Pelik/Video
     if len(senarai_media) > 0:
         with st.expander("🗑️ Buang Gambar / Video Dari Awan"):
             st.write("Pilih fail yang ingin dipadamkan secara kekal dari pangkalan data.")
@@ -257,7 +267,6 @@ if user_role == "Admin":
                                 st.error("Gagal dipadam.")
             st.write("---")
 
-    # Bahagian 2: Konfigurasi GDrive
     with st.form("form_folder_drive"):
         st.write("Tampal pautan folder Google Drive untuk trip ini.")
         st.warning("Wajib kongsi folder GDrive tersebut kepada alamat emel Service Account sebagai **VIEWER**.")
