@@ -13,29 +13,40 @@ user_role = st.session_state.get('role', '')
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- KOD OPTIMASI SKRIN MOBILE & PAKSAAN 3 KOLUM (FIX IPHONE 12 PM) ---
+# --- KOD OPTIMASI SKRIN MOBILE (FIX SCROLL KE KANAN IP12PM) ---
 st.markdown("""
 <style>
-/* 1. Penuhkan skrin telefon (Kurangkan ruang kosong kiri kanan) */
+/* 1. Kunci skrin supaya tidak boleh skrol ke tepi (Horizontal Scroll Lock) */
 .block-container {
     padding-top: 1.5rem !important;
-    padding-left: 0.2rem !important;
-    padding-right: 0.2rem !important;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important; 
 }
 h1, p { margin-left: 8px; }
 
-/* 2. GODAM STREAMLIT SUPAYA KEKAL 3 SEBARIS DI MOBILE */
+/* 2. GODAM STREAMLIT SUPAYA KEKAL 3 SEBARIS & FIT SKRIN FON */
 @media (max-width: 640px) {
     [data-testid="stHorizontalBlock"] {
         flex-direction: row !important;
         flex-wrap: nowrap !important;
-        gap: 3px !important; /* Jarak rapat ala Instagram */
+        gap: 2px !important; /* Jarak rapat ala IG */
+        width: 100% !important;
     }
     [data-testid="column"] {
         width: 33.33% !important;
-        min-width: 33.33% !important;
-        flex: 1 1 33.33% !important;
-        padding: 0 2px !important; /* Elak gambar bercantum teruk */
+        min-width: 0 !important; /* PENTING: Benarkan kolum mengecil, elak melimpah! */
+        flex: 1 1 0px !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+    }
+    
+    /* Kecilkan saiz butang Padam di mobile supaya tak tolak kotak jadi lebar */
+    [data-testid="stButton"] button {
+        padding: 2px 0px !important;
+        font-size: 11px !important;
+        min-height: 25px !important;
     }
 }
 
@@ -44,14 +55,14 @@ h1, p { margin-left: 8px; }
     position: relative;
     width: 100%;
     aspect-ratio: 1 / 1;
-    margin-bottom: 5px;
+    margin-bottom: 2px;
 }
 .media-box img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     border-radius: 4px;
-    border: 1px solid #333;
+    border: 1px solid #4d4d4d;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -113,7 +124,7 @@ def muat_naik_ke_gdrive(fail_buffer, nama_fail, jenis_mime, folder_id):
 
 
 st.title("🖼️ Galeri Media Kumpulan")
-st.write("Ruang memori foto dan video. Klik pada media untuk muat turun fail kualiti asal.")
+st.write("Ruang memori foto dan video. Klik pada media untuk paparan penuh.")
 
 try:
     info_db = conn.read(worksheet="Info_Kem", ttl=600)
@@ -155,7 +166,6 @@ st.write("---")
 # --- 4. PAPARAN GALERI & BUTANG HAPUS ---
 senarai_media = dapatkan_media_dari_folder(val_vault)
 
-# Butang Sync biasa (tanpa kolum supaya tidak diganggu oleh CSS mobile hack)
 if st.button("🔄 Segerakkan Galeri (Sync)", type="secondary"):
     st.cache_data.clear()
     dapatkan_media_dari_folder.clear()
@@ -181,7 +191,6 @@ if len(senarai_media) > 0:
             </div>
             """, unsafe_allow_html=True)
             
-            # Butang Hapus (Teks dipendekkan supaya nampak kemas dalam 33% skrin)
             if user_role == "Admin":
                 if st.button("🗑️ Padam", key=f"del_{item['id']}", use_container_width=True):
                     with st.spinner("..."):
