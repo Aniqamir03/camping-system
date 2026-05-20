@@ -3,9 +3,10 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import re
 import io
+import base64
+import requests
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
 
 # Ambil ID Trip aktif & Role
 current_trip = st.session_state.get('current_trip_id', '')
@@ -13,15 +14,14 @@ user_role = st.session_state.get('role', '')
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- 1. SETUP GOOGLE DRIVE API (Scope Penuh) ---
+# --- 1. SETUP GOOGLE DRIVE API (UNTUK BACA GAMBAR SAHAJA) ---
 @st.cache_resource
 def get_drive_service():
     try:
         creds_dict = st.secrets["connections"]["gsheets"]
-        # Scope ditukar untuk membenarkan sistem membaca & memuat naik (write) fail
         credentials = service_account.Credentials.from_service_account_info(
             creds_dict,
-            scopes=["https://www.googleapis.com/auth/drive"]
+            scopes=["https://www.googleapis.com/auth/drive.readonly"] # Tukar balik ke readonly
         )
         return build('drive', 'v3', credentials=credentials)
     except Exception as e:
@@ -37,7 +37,7 @@ def get_folder_id(url_folder):
     if match: return match.group(1)
     return None
 
-# --- 3. FUNGSI SEDUT GAMBAR DARI GDRIVE ---
+# --- 3. FUNGSI SEDUT GAMBAR DARI GDRIVE (READ-ONLY) ---
 @st.cache_data(ttl=300)
 def dapatkan_gambar_dari_folder(url_folder):
     folder_id = get_folder_id(url_folder)
@@ -56,21 +56,34 @@ def dapatkan_gambar_dari_folder(url_folder):
     except Exception as e:
         return []
 
-# --- 4. FUNGSI UPLOAD KE GDRIVE (DIRECT DARI WEBSITE) ---
+# --- 4. FUNGSI UPLOAD MENGGUNAKAN APPS SCRIPT (KUOTA GMAIL OWNER) ---
 def muat_naik_ke_gdrive(fail_buffer, nama_fail, jenis_mime, folder_id):
+    url_api = st.secrets.get("APPS_SCRIPT_URL")
+    if not url_api:
+        st.error("Ralat: APPS_SCRIPT_URL tidak dijumpai di Streamlit Secrets.")
+        return None
+    
     try:
-        # Tukar fail kepada bentuk bait (bytes) yang Google faham
-        fh = io.BytesIO(fail_buffer.getvalue())
-        media = MediaIoBaseUpload(fh, mimetype=jenis_mime, resumable=True)
-        metadata = {
-            'name': nama_fail,
-            'parents': [folder_id] # Masukkan terus ke dalam folder trip
+        # Tukar gambar kepada format base64
+        encoded_img = base64.b64encode(fail_buffer.getvalue()).decode('utf-8')
+        
+        payload = {
+            "filename": nama_fail,
+            "mimeType": jenis_mime,
+            "base64": encoded_img,
+            "folderId": folder_id
         }
-        # Arahkan API untuk hantar fail
-        fail_baru = drive_service.files().create(body=metadata, media_body=media, fields='id').execute()
-        return fail_baru.get('id')
+        
+        # Hantar gambar ke Apps Script (Run As You!)
+        res = requests.post(url_api, json=payload)
+        
+        if res.status_code == 200 and res.json().get('status') == 'success':
+            return res.json().get('id')
+        else:
+            st.error(f"Ralat Apps Script: {res.text}")
+            return None
     except Exception as e:
-        st.error(f"Ralat muat naik {nama_fail}: {e}")
+        st.error(f"Ralat sistem ketika memuat naik {nama_fail}: {e}")
         return None
 
 
@@ -93,7 +106,7 @@ else:
 folder_id_semasa = get_folder_id(val_vault)
 
 
-# --- 6. RUANGAN MUAT NAIK GAMBAR (UNTUK SEMUA USER) ---
+# --- 6. RUANGAN MUAT NAIK GAMBAR ---
 if folder_id_semasa:
     with st.expander("📤 Klik Sini Untuk Tambah Gambar Ke Galeri"):
         st.write("Pilih gambar dari telefon/PC anda. (Dinasihatkan max 10-15 gambar setiap kali muat naik supaya website tak *hang*).")
@@ -101,7 +114,6 @@ if folder_id_semasa:
         
         if st.button("🚀 Muat Naik Sekarang", type="primary", use_container_width=True):
             if uploaded_files:
-                # Paparkan progress bar supaya user tak bosan tunggu
                 progress_bar = st.progress(0)
                 status_text = st.empty()
                 
@@ -114,13 +126,11 @@ if folder_id_semasa:
                     if id_baru:
                         berjaya += 1
                     
-                    # Update progress bar
                     progress_bar.progress((i + 1) / jumlah_fail)
                 
                 status_text.text("Selesai!")
                 st.success(f"Berjaya memuat naik {berjaya} keping gambar!")
                 
-                # Cuci cache supaya gambar baru terus keluar di bawah
                 dapatkan_gambar_dari_folder.clear()
                 st.rerun()
             else:
@@ -175,7 +185,7 @@ if user_role == "Admin":
     
     with st.form("form_folder_drive"):
         st.write("Tampal pautan folder Google Drive untuk trip ini.")
-        st.warning("Wajib kongsi folder GDrive tersebut kepada alamat emel Service Account sebagai **EDITOR** supaya user boleh upload.")
+        st.warning("Wajib kongsi folder GDrive tersebut kepada alamat emel Service Account sebagai **VIEWER** untuk sistem paparan berfungsi.")
         new_vault = st.text_input("Pautan Folder GDrive:", value=val_vault)
         
         if st.form_submit_button("🚀 Simpan Kunci Folder"):
