@@ -1045,7 +1045,7 @@ html_kod = f"""
 </script>
 """
 
-components.html(html_kod, height=310)
+components.html(html_kod, height=650)
 
 st.divider()
 
