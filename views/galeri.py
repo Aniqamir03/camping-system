@@ -13,27 +13,56 @@ user_role = st.session_state.get('role', '')
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
+# --- KOD OPTIMASI SKRIN MOBILE & PAKSAAN 3 KOLUM (FIX IPHONE 12 PM) ---
 st.markdown("""
 <style>
-@media (max-width: 430px) {
-    .block-container {
-        padding-top: 1.5rem !important;
-        padding-left: 0.3rem !important;
-        padding-right: 0.3rem !important;
+/* 1. Penuhkan skrin telefon (Kurangkan ruang kosong kiri kanan) */
+.block-container {
+    padding-top: 1.5rem !important;
+    padding-left: 0.2rem !important;
+    padding-right: 0.2rem !important;
+}
+h1, p { margin-left: 8px; }
+
+/* 2. GODAM STREAMLIT SUPAYA KEKAL 3 SEBARIS DI MOBILE */
+@media (max-width: 640px) {
+    [data-testid="stHorizontalBlock"] {
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 3px !important; /* Jarak rapat ala Instagram */
     }
-    h1, p { margin-left: 8px; }
+    [data-testid="column"] {
+        width: 33.33% !important;
+        min-width: 33.33% !important;
+        flex: 1 1 33.33% !important;
+        padding: 0 2px !important; /* Elak gambar bercantum teruk */
+    }
+}
+
+/* 3. Kelas CSS untuk tetapkan gambar jadi petak sempurna (1:1) */
+.media-box {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    margin-bottom: 5px;
+}
+.media-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid #333;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 1. SETUP GOOGLE DRIVE API (Hanya untuk baca/sedut gambar) ---
+# --- 1. SETUP GOOGLE DRIVE API ---
 @st.cache_resource
 def get_drive_service():
     try:
         creds_dict = st.secrets["connections"]["gsheets"]
         credentials = service_account.Credentials.from_service_account_info(
-            creds_dict,
-            scopes=["https://www.googleapis.com/auth/drive.readonly"] 
+            creds_dict, scopes=["https://www.googleapis.com/auth/drive.readonly"] 
         )
         return build('drive', 'v3', credentials=credentials)
     except Exception as e:
@@ -84,7 +113,7 @@ def muat_naik_ke_gdrive(fail_buffer, nama_fail, jenis_mime, folder_id):
 
 
 st.title("🖼️ Galeri Media Kumpulan")
-st.write("Ruang memori foto dan video kualiti asal. Klik pada media untuk paparan penuh atau muat turun fail asal.")
+st.write("Ruang memori foto dan video. Klik pada media untuk muat turun fail kualiti asal.")
 
 try:
     info_db = conn.read(worksheet="Info_Kem", ttl=600)
@@ -99,7 +128,7 @@ folder_id_semasa = get_folder_id(val_vault)
 # --- 3. RUANGAN UPLOAD ---
 if folder_id_semasa:
     with st.expander("📤 Klik Sini Untuk Tambah Gambar / Video"):
-        st.markdown("**Sokongan Fail Luas:** `PNG`, `JPG`, `JPEG`, `WEBP`, `GIF`, `HEIC`, `MP4`, `MOV`, `AVI`")
+        st.markdown("**Format Disokong:** `PNG`, `JPG`, `JPEG`, `WEBP`, `GIF`, `HEIC`, `MP4`, `MOV`, `AVI`")
         uploaded_files = st.file_uploader("Pilih Fail Media:", type=['png', 'jpg', 'jpeg', 'webp', 'gif', 'heic', 'mp4', 'mov', 'avi', 'mkv', '3gp'], accept_multiple_files=True)
         
         if st.button("🚀 Muat Naik Sekarang", type="primary", use_container_width=True):
@@ -123,58 +152,59 @@ if folder_id_semasa:
                 st.warning("Sila pilih fail media terlebih dahulu.")
 st.write("---")
 
-# --- 4. PAPARAN GALERI & BUTANG HAPUS (ADMIN) ---
+# --- 4. PAPARAN GALERI & BUTANG HAPUS ---
 senarai_media = dapatkan_media_dari_folder(val_vault)
 
-col_refresh, _ = st.columns([1, 2])
-with col_refresh:
-    if st.button("🔄 Segerakkan (Sync) Galeri", use_container_width=True):
-        st.cache_data.clear()
-        dapatkan_media_dari_folder.clear()
-        st.rerun()
+# Butang Sync biasa (tanpa kolum supaya tidak diganggu oleh CSS mobile hack)
+if st.button("🔄 Segerakkan Galeri (Sync)", type="secondary"):
+    st.cache_data.clear()
+    dapatkan_media_dari_folder.clear()
+    st.rerun()
+
+st.markdown("<br>", unsafe_allow_html=True)
 
 if len(senarai_media) > 0:
+    # Membina 3 kolum utama
     cols = st.columns(3)
+    
     for idx, item in enumerate(senarai_media):
         with cols[idx % 3]:
-            icon_overlay = '<div style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.7); color:white; padding:3px 6px; border-radius:5px; font-size:11px; z-index:10;">🎥 VIDEO</div>' if item['is_video'] else ''
+            icon_overlay = '<div style="position:absolute; top:4px; right:4px; background:rgba(0,0,0,0.7); color:white; padding:2px 4px; border-radius:3px; font-size:9px; z-index:10;">🎥 VIDEO</div>' if item['is_video'] else ''
             
+            # HTML Media Box
             st.markdown(f"""
-            <div style="position: relative; width: 100%; aspect-ratio: 1 / 1; margin-bottom: 8px;">
+            <div class="media-box">
                 <a href="https://drive.google.com/file/d/{item['id']}/view?usp=drivesdk" target="_blank">
-                    <img src="{item['link']}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px; border: 1px solid #4d4d4d;">
+                    <img src="{item['link']}" loading="lazy">
                 </a>
                 {icon_overlay}
             </div>
             """, unsafe_allow_html=True)
             
-            # --- FUNGSI HAPUS MENGGUNAKAN APPS SCRIPT (BERKUASA PENUH) ---
+            # Butang Hapus (Teks dipendekkan supaya nampak kemas dalam 33% skrin)
             if user_role == "Admin":
-                if st.button("🗑️ Hapus Fail", key=f"del_{item['id']}", use_container_width=True, type="secondary"):
-                    with st.spinner("Sedang membuang..."):
+                if st.button("🗑️ Padam", key=f"del_{item['id']}", use_container_width=True):
+                    with st.spinner("..."):
                         try:
                             url_api = st.secrets.get("APPS_SCRIPT_URL")
                             payload_delete = {"action": "delete", "fileId": item['id']}
                             res = requests.post(url_api, json=payload_delete)
-                            
                             if res.status_code == 200 and res.json().get('status') == 'success':
-                                st.success("Fail berjaya dipadam!")
                                 st.cache_data.clear()
                                 dapatkan_media_dari_folder.clear()
                                 st.rerun()
                             else:
-                                st.error("Gagal memadam: Pastikan Apps Script telah dikemaskini.")
-                        except Exception as e:
-                            st.error(f"Gagal memadam: {e}")
+                                st.error("Gagal.")
+                        except:
+                            st.error("Gagal memadam.")
 else:
-    st.info("📷 Galeri kosong atau pautan folder belum ditetapkan.")
+    st.info("📷 Galeri masih kosong.")
 
 # --- 5. PANEL CONFIGURATION ADMIN ---
 if user_role == "Admin":
     st.write("---")
     st.subheader("⚙️ Panel Konfigurasi Folder (Admin)")
     with st.form("form_folder_drive"):
-        st.write("Tampal pautan folder Google Drive untuk trip ini.")
         new_vault = st.text_input("Pautan Folder GDrive:", value=val_vault)
         if st.form_submit_button("🚀 Simpan Kunci Folder"):
             if current_trip:
