@@ -37,31 +37,37 @@ def get_folder_id(url_folder):
     if match: return match.group(1)
     return None
 
-# --- 3. FUNGSI SEDUT MEDIA DARI GDRIVE (GAMBAR & VIDEO) ---
+# --- 3. FUNGSI SEDUT MEDIA DARI GDRIVE (GODAM SEMUA FORMAT FAIL) ---
 @st.cache_data(ttl=300)
 def dapatkan_media_dari_folder(url_folder):
     folder_id = get_folder_id(url_folder)
     if not folder_id or not drive_service: return []
     
     try:
-        # Carian merangkumi imej dan video
-        query = f"'{folder_id}' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false"
+        # PENTING: Kita sedut SEMUA fail (kecuali sub-folder) supaya fail iPhone (HEIC/Octet) tak tertinggal!
+        query = f"'{folder_id}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed = false"
         results = drive_service.files().list(
             q=query, 
             fields="files(id, thumbnailLink, mimeType)", 
-            pageSize=300 
+            pageSize=1000 
         ).execute()
         
         items = results.get('files', [])
         senarai_media = []
         for item in items:
-            if 'thumbnailLink' in item:
-                senarai_media.append({
-                    'id': item['id'],
-                    'link': item['thumbnailLink'].replace('=s220', '=s800'),
-                    'is_video': 'video/' in item.get('mimeType', ''),
-                    'view_link': f"https://drive.google.com/file/d/{item['id']}/view?usp=drivesdk"
-                })
+            # Jika Google lambat bagi thumbnail, kita paksa guna API pembina link direct!
+            link_gambar = item.get('thumbnailLink', '')
+            if link_gambar:
+                link_gambar = link_gambar.replace('=s220', '=s800')
+            else:
+                link_gambar = f"https://drive.google.com/thumbnail?id={item['id']}&sz=w800"
+
+            senarai_media.append({
+                'id': item['id'],
+                'link': link_gambar,
+                'is_video': 'video' in str(item.get('mimeType', '')).lower(),
+                'view_link': f"https://drive.google.com/file/d/{item['id']}/view?usp=drivesdk"
+            })
         return senarai_media
     except Exception as e:
         return []
@@ -73,7 +79,7 @@ def muat_naik_ke_gdrive(fail_buffer, nama_fail, jenis_mime, folder_id):
     try:
         encoded_img = base64.b64encode(fail_buffer.getvalue()).decode('utf-8')
         payload = {
-            "action": "upload", # Penting untuk Apps Script faham ini adalah upload
+            "action": "upload",
             "filename": nama_fail,
             "mimeType": jenis_mime,
             "base64": encoded_img,
@@ -138,6 +144,7 @@ if folder_id_semasa:
                 status_text.text("Selesai!")
                 st.success(f"Berjaya memuat naik {berjaya} fail media!")
                 
+                # Cuci cache paksaan
                 dapatkan_media_dari_folder.clear()
                 st.rerun()
             else:
@@ -148,7 +155,8 @@ st.write("---")
 # --- 7. PAPARAN GRID CSS ASAL YANG SEMPURNA ---
 senarai_media = dapatkan_media_dari_folder(val_vault)
 
-if st.button("🔄 Segerakkan (Sync) Galeri", use_container_width=True):
+if st.button("🔄 Segerakkan (Sync) Galeri", use_container_width=True, type="secondary"):
+    # Cuci memori dengan bersih
     dapatkan_media_dari_folder.clear()
     st.rerun()
 
