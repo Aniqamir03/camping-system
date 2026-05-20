@@ -172,12 +172,6 @@ div[data-testid="stLinkButton"] > a:hover {
     box-shadow: 0 18px 42px rgba(10,191,138,0.42) !important;
 }
 
-.stButton > button:active,
-[data-testid="stFormSubmitButton"] > button:active,
-div[data-testid="stLinkButton"] > a:active {
-    transform: translateY(0) scale(0.98) !important;
-}
-
 .stTextInput input,
 .stDateInput input,
 .stTextArea textarea,
@@ -188,7 +182,6 @@ div[data-testid="stLinkButton"] > a:active {
     border-radius: 14px !important;
     min-height: 45px !important;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.08) !important;
-    transition: border 0.25s ease, box-shadow 0.25s ease, background 0.25s ease !important;
 }
 
 .stTextInput input:focus,
@@ -510,6 +503,7 @@ def section_header(icon: str, title: str, badge: str = ""):
     icon_safe = html_lib.escape(icon, quote=False)
     title_safe = html_lib.escape(title, quote=False)
     badge_html = f'<span class="badge">{html_lib.escape(badge, quote=False)}</span>' if badge else ""
+
     st.markdown(
         f'<div class="section-heading"><span class="section-icon">{icon_safe}</span><span class="section-title">{title_safe}</span>{badge_html}</div>',
         unsafe_allow_html=True
@@ -520,6 +514,7 @@ def stat_card(icon: str, label: str, value: str):
     icon_safe = html_lib.escape(icon, quote=False)
     label_safe = html_lib.escape(label, quote=False)
     value_safe = html_lib.escape(str(value), quote=False)
+
     st.markdown(
         f'<div class="stat-card"><div class="stat-icon">{icon_safe}</div><div><div class="stat-label">{label_safe}</div><div class="stat-value">{value_safe}</div></div></div>',
         unsafe_allow_html=True
@@ -545,26 +540,28 @@ p1 = p2 = p3 = ""
 
 try:
     info_db = conn.read(worksheet="Info_Kem", ttl=600)
+
     if not info_db.empty:
-        if current_trip and 'ID_Trip' in info_db.columns:
-            info_db['ID_Trip'] = info_db['ID_Trip'].astype(str).replace('nan', '').str.strip()
-            info_semasa = info_db[info_db['ID_Trip'] == current_trip]
+        if current_trip and "ID_Trip" in info_db.columns:
+            info_db["ID_Trip"] = info_db["ID_Trip"].astype(str).replace("nan", "").str.strip()
+            info_semasa = info_db[info_db["ID_Trip"] == current_trip]
         else:
             info_semasa = info_db
 
         if not info_semasa.empty:
-            lokasi_kem = str(info_semasa.iloc[0].get('Lokasi', default_lokasi)).replace('nan', '').strip() or default_lokasi
-            check_in = str(info_semasa.iloc[0].get('Check_In', default_in)).replace('nan', '').strip() or default_in
-            check_out = str(info_semasa.iloc[0].get('Check_Out', default_out)).replace('nan', '').strip() or default_out
+            lokasi_kem = str(info_semasa.iloc[0].get("Lokasi", default_lokasi)).replace("nan", "").strip() or default_lokasi
+            check_in = str(info_semasa.iloc[0].get("Check_In", default_in)).replace("nan", "").strip() or default_in
+            check_out = str(info_semasa.iloc[0].get("Check_Out", default_out)).replace("nan", "").strip() or default_out
 
-            raw_maps = str(info_semasa.iloc[0].get('Maps_URL', default_maps)).strip()
-            raw_waze = str(info_semasa.iloc[0].get('Waze_URL', default_waze)).strip()
-            maps_url = default_maps if raw_maps.lower() in ['nan', ''] else raw_maps
-            waze_url = default_waze if raw_waze.lower() in ['nan', ''] else raw_waze
+            raw_maps = str(info_semasa.iloc[0].get("Maps_URL", default_maps)).strip()
+            raw_waze = str(info_semasa.iloc[0].get("Waze_URL", default_waze)).strip()
 
-            p1 = str(info_semasa.iloc[0].get('Poster_Pic_1', '')).replace('nan', '').strip()
-            p2 = str(info_semasa.iloc[0].get('Poster_Pic_2', '')).replace('nan', '').strip()
-            p3 = str(info_semasa.iloc[0].get('Poster_Pic_3', '')).replace('nan', '').strip()
+            maps_url = default_maps if raw_maps.lower() in ["nan", ""] else raw_maps
+            waze_url = default_waze if raw_waze.lower() in ["nan", ""] else raw_waze
+
+            p1 = str(info_semasa.iloc[0].get("Poster_Pic_1", "")).replace("nan", "").strip()
+            p2 = str(info_semasa.iloc[0].get("Poster_Pic_2", "")).replace("nan", "").strip()
+            p3 = str(info_semasa.iloc[0].get("Poster_Pic_3", "")).replace("nan", "").strip()
 except:
     pass
 
@@ -576,7 +573,6 @@ if maps_url == default_maps and lokasi_kem != default_lokasi:
 
 embed_map_url = f"https://maps.google.com/maps?q={lokasi_url}&output=embed"
 
-
 section_header("📍", "Info Lokasi Percutian", "LIVE")
 
 col1, col2 = st.columns(2)
@@ -586,7 +582,7 @@ with col1:
     stat_card("🏕️", "Lokasi Tapak", lokasi_kem)
     stat_card("📥", "Check-In", check_in)
     stat_card("📤", "Check-Out", check_out)
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown('<p class="helper-text">🚘 <strong>Pautan Navigasi Pantas</strong></p>', unsafe_allow_html=True)
     st.link_button("🗺️ Buka di Google Maps", maps_url)
@@ -600,7 +596,6 @@ with col2:
 
 st.divider()
 
-
 section_header("🖼️", "Poster & Jadual Aktiviti Kumpulan")
 
 senarai_poster = [p for p in [p1, p2, p3] if p and p.lower() != "nan"]
@@ -611,7 +606,14 @@ if senarai_poster:
 
     for i, img_url in enumerate(senarai_poster):
         img_safe = html_lib.escape(img_url, quote=True)
-        divs_gambar += f'<div class="poster-slide"><div class="slide-number">{i + 1} / {len(senarai_poster)}</div><img src="{img_safe}" alt="Poster aktiviti {i + 1}"></div>'
+
+        divs_gambar += (
+            f'<div class="poster-slide">'
+            f'<div class="slide-number">{i + 1} / {len(senarai_poster)}</div>'
+            f'<img src="{img_safe}" alt="Poster aktiviti {i + 1}">'
+            f'</div>'
+        )
+
         dots_html += f'<button class="poster-dot" onclick="goToSlide({i})" aria-label="Poster {i + 1}"></button>'
 
     html_kod = f"""
@@ -628,13 +630,18 @@ if senarai_poster:
     padding: 0;
 }}
 
+html,
 body {{
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    width: 100%;
+    margin: 0;
     background: transparent;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    overflow: hidden;
 }}
 
 .poster-wrap {{
     width: 100%;
+    height: 100%;
     border-radius: 22px;
     overflow: hidden;
     background: rgba(255,255,255,0.075);
@@ -642,18 +649,18 @@ body {{
     box-shadow: 0 18px 45px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.10);
     backdrop-filter: blur(18px) saturate(145%);
     -webkit-backdrop-filter: blur(18px) saturate(145%);
-    padding: 14px;
+    padding: 12px;
 }}
 
 .poster-slider {{
     position: relative;
     width: 100%;
-    height: 570px;
+    height: 610px;
     overflow: hidden;
     border-radius: 18px;
     background:
         linear-gradient(135deg, rgba(10,191,138,0.12), rgba(0,119,182,0.12)),
-        rgba(0,0,0,0.28);
+        rgba(0,0,0,0.32);
     touch-action: pan-y;
 }}
 
@@ -662,27 +669,29 @@ body {{
     position: relative;
     width: 100%;
     height: 100%;
-    animation: posterFade 0.72s ease both;
+    animation: posterFade 0.62s ease both;
 }}
 
 .poster-slide img {{
     width: 100%;
     height: 100%;
     object-fit: contain;
+    object-position: center;
     display: block;
-    transform: scale(1.01);
-    animation: posterZoom 5s ease-in-out both;
+    background: rgba(0,0,0,0.18);
+    transform: none;
+    animation: none;
 }}
 
 .slide-number {{
     position: absolute;
-    top: 14px;
-    right: 14px;
+    top: 12px;
+    right: 12px;
     z-index: 6;
     min-height: 28px;
     padding: 5px 12px;
     border-radius: 999px;
-    background: rgba(5,20,31,0.50);
+    background: rgba(5,20,31,0.54);
     border: 1px solid rgba(255,255,255,0.18);
     color: white;
     font-size: 0.78rem;
@@ -699,7 +708,7 @@ body {{
     height: 42px;
     border-radius: 999px;
     border: 1px solid rgba(255,255,255,0.24);
-    background: rgba(5,20,31,0.50);
+    background: rgba(5,20,31,0.54);
     color: white;
     font-size: 25px;
     font-weight: 800;
@@ -721,11 +730,11 @@ body {{
 }}
 
 .poster-prev {{
-    left: 14px;
+    left: 12px;
 }}
 
 .poster-next {{
-    right: 14px;
+    right: 12px;
 }}
 
 .poster-controls {{
@@ -758,7 +767,7 @@ body {{
     gap: 7px;
     padding: 6px 8px;
     border-radius: 999px;
-    background: rgba(5,20,31,0.34);
+    background: rgba(5,20,31,0.36);
     border: 1px solid rgba(255,255,255,0.14);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
@@ -781,48 +790,56 @@ body {{
 }}
 
 @keyframes posterFade {{
-    from {{ opacity: 0; transform: translateX(12px) scale(1.015); }}
+    from {{ opacity: 0; transform: translateX(10px) scale(1.01); }}
     to {{ opacity: 1; transform: translateX(0) scale(1); }}
-}}
-
-@keyframes posterZoom {{
-    from {{ transform: scale(1.045); }}
-    to {{ transform: scale(1.01); }}
 }}
 
 @media (max-width: 520px) {{
     .poster-wrap {{
         border-radius: 18px;
-        padding: 10px;
+        padding: 9px;
     }}
 
     .poster-slider {{
-        height: 220px;
+        height: 560px;
         border-radius: 15px;
     }}
 
     .poster-nav {{
-        width: 36px;
-        height: 36px;
+        width: 34px;
+        height: 34px;
         font-size: 21px;
     }}
 
     .poster-prev {{
-        left: 10px;
+        left: 9px;
     }}
 
     .poster-next {{
-        right: 10px;
+        right: 9px;
     }}
 
     .poster-controls {{
         grid-template-columns: 1fr;
         justify-items: center;
         gap: 9px;
+        padding-top: 10px;
     }}
 
     .progress-track {{
         width: 100%;
+    }}
+
+    .slide-number {{
+        top: 10px;
+        right: 10px;
+        font-size: 0.72rem;
+    }}
+}}
+
+@media (max-width: 390px) {{
+    .poster-slider {{
+        height: 520px;
     }}
 }}
 </style>
@@ -834,6 +851,7 @@ body {{
         <button class="poster-nav poster-prev" onclick="changeSlide(-1)" aria-label="Poster sebelum">‹</button>
         <button class="poster-nav poster-next" onclick="changeSlide(1)" aria-label="Poster seterusnya">›</button>
     </div>
+
     <div class="poster-controls">
         <div class="progress-track"><div class="progress-fill" id="progressBar"></div></div>
         <div class="poster-dots" id="posterDots">{dots_html}</div>
@@ -900,13 +918,13 @@ showSlide(0);
 </body>
 </html>
 """
-    components.html(html_kod, height=960, scrolling=False)
+
+    components.html(html_kod, height=675, scrolling=False)
 
 else:
     st.info("ℹ️ Belum ada poster jadual aktiviti untuk trip ini. Admin akan kemaskini sebentar lagi.")
 
 st.divider()
-
 
 section_header("🌦️", "Ramalan Cuaca Kumpulan")
 
@@ -919,7 +937,6 @@ if lokasi_kem != default_lokasi:
     st.link_button("✉️ Semak Cuaca Live di Yahoo Weather", yahoo_weather_url, type="primary")
 else:
     st.info("Butang ramalan cuaca Yahoo akan diaktifkan sebaik sahaja Admin menetapkan lokasi tapak.")
-
 
 if st.session_state.get("role") == "Admin":
     st.divider()
@@ -940,8 +957,10 @@ if st.session_state.get("role") == "Admin":
             new_lokasi = st.text_input("Nama Lokasi Tapak (Contoh: Riverside Camp, Pahang)")
 
             col_new_in, col_new_out = st.columns(2)
+
             with col_new_in:
                 new_in = st.date_input("Tarikh Check-In / Bertolak", value=datetime.date.today(), key="new_in")
+
             with col_new_out:
                 new_out = st.date_input("Tarikh Check-Out / Pulang", value=datetime.date.today(), key="new_out")
 
@@ -966,6 +985,7 @@ if st.session_state.get("role") == "Admin":
                     }])
 
                     lokasi_url_new = urllib.parse.quote(new_lokasi.strip())
+
                     info_row = pd.DataFrame([{
                         "ID_Trip": next_id,
                         "Lokasi": new_lokasi.strip(),
@@ -1014,24 +1034,24 @@ if st.session_state.get("role") == "Admin":
                     try:
                         info_pukal = conn.read(worksheet="Info_Kem", ttl=600)
 
-                        if info_pukal.empty or 'ID_Trip' not in info_pukal.columns:
+                        if info_pukal.empty or "ID_Trip" not in info_pukal.columns:
                             info_pukal = pd.DataFrame(columns=[
                                 "ID_Trip", "Lokasi", "Check_In", "Check_Out",
                                 "Maps_URL", "Waze_URL", "Poster_Pic_1", "Poster_Pic_2", "Poster_Pic_3"
                             ])
                         else:
                             for col in info_pukal.columns:
-                                info_pukal[col] = info_pukal[col].astype(str).replace('nan', '').str.strip()
+                                info_pukal[col] = info_pukal[col].astype(str).replace("nan", "").str.strip()
 
-                        for col_name in ['Poster_Pic_1', 'Poster_Pic_2', 'Poster_Pic_3']:
+                        for col_name in ["Poster_Pic_1", "Poster_Pic_2", "Poster_Pic_3"]:
                             if col_name not in info_pukal.columns:
                                 info_pukal[col_name] = ""
 
-                        if id_trip_save in info_pukal['ID_Trip'].values:
-                            idx = info_pukal.index[info_pukal['ID_Trip'] == id_trip_save][0]
-                            info_pukal.at[idx, 'Poster_Pic_1'] = url_p1.strip()
-                            info_pukal.at[idx, 'Poster_Pic_2'] = url_p2.strip()
-                            info_pukal.at[idx, 'Poster_Pic_3'] = url_p3.strip()
+                        if id_trip_save in info_pukal["ID_Trip"].values:
+                            idx = info_pukal.index[info_pukal["ID_Trip"] == id_trip_save][0]
+                            info_pukal.at[idx, "Poster_Pic_1"] = url_p1.strip()
+                            info_pukal.at[idx, "Poster_Pic_2"] = url_p2.strip()
+                            info_pukal.at[idx, "Poster_Pic_3"] = url_p3.strip()
                         else:
                             new_row = pd.DataFrame([{
                                 "ID_Trip": id_trip_save,
@@ -1044,6 +1064,7 @@ if st.session_state.get("role") == "Admin":
                                 "Poster_Pic_2": url_p2.strip(),
                                 "Poster_Pic_3": url_p3.strip(),
                             }])
+
                             info_pukal = pd.concat([info_pukal, new_row], ignore_index=True)
 
                         conn.update(worksheet="Info_Kem", data=info_pukal)
@@ -1059,13 +1080,13 @@ if st.session_state.get("role") == "Admin":
         else:
             try:
                 db_trip_pukal = conn.read(worksheet="Senarai_Trip", ttl=600)
-                trip_semasa_info = db_trip_pukal[db_trip_pukal['ID_Trip'] == current_trip]
+                trip_semasa_info = db_trip_pukal[db_trip_pukal["ID_Trip"] == current_trip]
 
                 if not trip_semasa_info.empty:
                     info_trip = trip_semasa_info.iloc[0]
-                    nama_semasa = str(info_trip.get('Nama_Trip', ''))
-                    tarikh_semasa = str(info_trip.get('Tarikh', ''))
-                    status_semasa = str(info_trip.get('Status_Trip', 'Aktif'))
+                    nama_semasa = str(info_trip.get("Nama_Trip", ""))
+                    tarikh_semasa = str(info_trip.get("Tarikh", ""))
+                    status_semasa = str(info_trip.get("Status_Trip", "Aktif"))
 
                     st.write(f"### ⚙️ Pengurusan: **{nama_semasa}** ({current_trip})")
                     tindakan_trip = st.radio("Pilih Tindakan Pengurusan:", ["Kemaskini Maklumat Trip", "Padam Trip ❌"])
@@ -1088,10 +1109,10 @@ if st.session_state.get("role") == "Admin":
                                 if not edit_nama:
                                     st.error("Nama aktiviti tidak boleh dibiarkan kosong!")
                                 else:
-                                    idx = db_trip_pukal.index[db_trip_pukal['ID_Trip'] == current_trip][0]
-                                    db_trip_pukal.at[idx, 'Nama_Trip'] = edit_nama.strip()
-                                    db_trip_pukal.at[idx, 'Tarikh'] = edit_tarikh.strftime("%Y-%m-%d")
-                                    db_trip_pukal.at[idx, 'Status_Trip'] = edit_status
+                                    idx = db_trip_pukal.index[db_trip_pukal["ID_Trip"] == current_trip][0]
+                                    db_trip_pukal.at[idx, "Nama_Trip"] = edit_nama.strip()
+                                    db_trip_pukal.at[idx, "Tarikh"] = edit_tarikh.strftime("%Y-%m-%d")
+                                    db_trip_pukal.at[idx, "Status_Trip"] = edit_status
 
                                     conn.update(worksheet="Senarai_Trip", data=db_trip_pukal)
                                     st.success("Maklumat aktiviti berjaya dikemaskini!")
@@ -1102,17 +1123,17 @@ if st.session_state.get("role") == "Admin":
                                 if not sahkan_padam:
                                     st.error("Sila tanda pada kotak pengesahan sebelum memadam!")
                                 else:
-                                    db_trip_baru = db_trip_pukal[db_trip_pukal['ID_Trip'] != current_trip]
+                                    db_trip_baru = db_trip_pukal[db_trip_pukal["ID_Trip"] != current_trip]
                                     conn.update(worksheet="Senarai_Trip", data=db_trip_baru)
 
                                     try:
                                         info_pukal = conn.read(worksheet="Info_Kem", ttl=600)
-                                        info_baru = info_pukal[info_pukal['ID_Trip'] != current_trip]
+                                        info_baru = info_pukal[info_pukal["ID_Trip"] != current_trip]
                                         conn.update(worksheet="Info_Kem", data=info_baru)
                                     except:
                                         pass
 
-                                    st.session_state['current_trip_id'] = ""
+                                    st.session_state["current_trip_id"] = ""
                                     st.success(f"Aktiviti {nama_semasa} berjaya dipadamkan sepenuhnya.")
                                     st.cache_data.clear()
                                     st.rerun()
