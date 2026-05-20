@@ -31,6 +31,7 @@ login_page = st.Page("views/login.py", title="Log Masuk", icon="🔐")
 dashboard_page = st.Page("views/dashboard.py", title="Dashboard", icon="🏕️")
 tentatif_page = st.Page("views/tentatif.py", title="Tentatif & Lokasi", icon="📅")
 kehadiran_page = st.Page("views/kehadiran.py", title="Pengesahan Kehadiran", icon="📝")
+galeri_page = st.Page("views/galeri.py", title="Galeri", icon="🖼️")
 chat_page = st.Page("views/chat.py", title="Sembang Kumpulan", icon="💬")
 profil_page = st.Page("views/profil.py", title="Profil Saya", icon="👤")
 admin_page = st.Page("views/admin.py", title="Urus Ahli", icon="⚙️")
@@ -43,6 +44,7 @@ else:
         dashboard_page,
         tentatif_page,
         kehadiran_page,
+        galeri_page,
         chat_page,
         profil_page,
     ]
