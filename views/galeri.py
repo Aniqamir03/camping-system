@@ -8,124 +8,110 @@ import requests
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
+# Ambil ID Trip aktif & Role pengguna semasa
 current_trip = st.session_state.get('current_trip_id', '')
 user_role = st.session_state.get('role', '')
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- KOD OPTIMASI SKRIN MOBILE (FIX SCROLL KE KANAN IP12PM) ---
+# --- KOD OPTIMASI SKRIN MOBILE (IPHONE 12 PRO MAX) ---
 st.markdown("""
 <style>
-/* 1. Kunci skrin supaya tidak boleh skrol ke tepi (Horizontal Scroll Lock) */
-.block-container {
-    padding-top: 1.5rem !important;
-    padding-left: 2px !important;
-    padding-right: 2px !important;
-    max-width: 100% !important;
-    overflow-x: hidden !important; 
-}
-h1, p { margin-left: 8px; }
-
-/* 2. GODAM STREAMLIT SUPAYA KEKAL 3 SEBARIS & FIT SKRIN FON */
-@media (max-width: 640px) {
-    [data-testid="stHorizontalBlock"] {
-        flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        gap: 2px !important; /* Jarak rapat ala IG */
-        width: 100% !important;
+@media (max-width: 430px) {
+    .block-container {
+        padding-top: 1.5rem !important;
+        padding-left: 0.3rem !important;
+        padding-right: 0.3rem !important;
     }
-    [data-testid="column"] {
-        width: 33.33% !important;
-        min-width: 0 !important; /* PENTING: Benarkan kolum mengecil, elak melimpah! */
-        flex: 1 1 0px !important;
-        padding: 0 !important;
-        overflow: hidden !important;
-    }
-    
-    /* Kecilkan saiz butang Padam di mobile supaya tak tolak kotak jadi lebar */
-    [data-testid="stButton"] button {
-        padding: 2px 0px !important;
-        font-size: 11px !important;
-        min-height: 25px !important;
-    }
-}
-
-/* 3. Kelas CSS untuk tetapkan gambar jadi petak sempurna (1:1) */
-.media-box {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    margin-bottom: 2px;
-}
-.media-box img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 4px;
-    border: 1px solid #4d4d4d;
+    h1, p { margin-left: 8px; }
 }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 1. SETUP GOOGLE DRIVE API ---
+# --- 1. SETUP GOOGLE DRIVE API (Scope Penuh Untuk Membolehkan Fungsi Padam) ---
 @st.cache_resource
 def get_drive_service():
     try:
         creds_dict = st.secrets["connections"]["gsheets"]
         credentials = service_account.Credentials.from_service_account_info(
-            creds_dict, scopes=["https://www.googleapis.com/auth/drive.readonly"] 
+            creds_dict,
+            scopes=["https://www.googleapis.com/auth/drive"] # Ditukar kepada akses penuh untuk keupayaan Trash
         )
         return build('drive', 'v3', credentials=credentials)
     except Exception as e:
-        st.error("Ralat API Google Drive.")
+        st.error("Ralat API Google Drive. Pastikan emel Service Account dimasukkan.")
         return None
 
 drive_service = get_drive_service()
 
+# --- 2. FUNGSI EKSTRAK FOLDER ID ---
 def get_folder_id(url_folder):
     if not url_folder or url_folder == 'nan': return None
     match = re.search(r"folders/([a-zA-Z0-9_-]+)", url_folder.strip())
     if match: return match.group(1)
     return None
 
+# --- 3. FUNGSI SEDUT GAMBAR & VIDEO DARI GDRIVE ---
 @st.cache_data(ttl=600)
 def dapatkan_media_dari_folder(url_folder):
     folder_id = get_folder_id(url_folder)
     if not folder_id or not drive_service: return []
     
     try:
+        # Carian automatik merangkumi imej DAN video yang tidak dibuang (trashed = false)
         query = f"'{folder_id}' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false"
         results = drive_service.files().list(
-            q=query, fields="files(id, thumbnailLink, mimeType)", pageSize=300 
+            q=query, 
+            fields="files(id, thumbnailLink, mimeType)", 
+            pageSize=300 
         ).execute()
         
         items = results.get('files', [])
         senarai_media = []
+        
         for item in items:
             if 'thumbnailLink' in item:
+                # Tukar resolusi pre-view kepada HD pantas
                 hd_link = item['thumbnailLink'].replace('=s220', '=s800')
-                senarai_media.append({'id': item['id'], 'link': hd_link, 'is_video': 'video/' in item.get('mimeType', '')})
+                # Semak sama ada fail tersebut adalah video
+                is_video = 'video/' in item.get('mimeType', '')
+                
+                senarai_media.append({
+                    'id': item['id'],
+                    'link': hd_link,
+                    'is_video': is_video
+                })
         return senarai_media
     except Exception as e:
         return []
 
-# --- 2. FUNGSI UPLOAD MENGGUNAKAN APPS SCRIPT ---
+# --- 4. FUNGSI UPLOAD MENGGUNAKAN APPS SCRIPT ---
 def muat_naik_ke_gdrive(fail_buffer, nama_fail, jenis_mime, folder_id):
     url_api = st.secrets.get("APPS_SCRIPT_URL")
-    if not url_api: return None
+    if not url_api:
+        st.error("Ralat: APPS_SCRIPT_URL tidak dijumpai di Streamlit Secrets.")
+        return None
+    
     try:
         encoded_file = base64.b64encode(fail_buffer.getvalue()).decode('utf-8')
-        payload = {"action": "upload", "filename": nama_fail, "mimeType": jenis_mime, "base64": encoded_file, "folderId": folder_id}
+        payload = {
+            "filename": nama_fail,
+            "mimeType": jenis_mime,
+            "base64": encoded_file,
+            "folderId": folder_id
+        }
         res = requests.post(url_api, json=payload)
         if res.status_code == 200 and res.json().get('status') == 'success':
             return res.json().get('id')
         return None
-    except: return None
+    except Exception as e:
+        return None
 
 
 st.title("🖼️ Galeri Media Kumpulan")
-st.write("Ruang memori foto dan video. Klik pada media untuk paparan penuh.")
+st.write("Ruang memori foto dan video kualiti asal. Klik pada media untuk paparan penuh atau muat turun fail asal.")
 
+# --- 5. TARIK DATA FOLDER DARI GSHEETS ---
 try:
     info_db = conn.read(worksheet="Info_Kem", ttl=600)
     if 'Vault_URL' not in info_db.columns: info_db['Vault_URL'] = ""
@@ -133,97 +119,122 @@ try:
 except:
     info_db = pd.DataFrame(columns=['ID_Trip', 'Vault_URL'])
 
-val_vault = str(info_db[info_db['ID_Trip'] == current_trip].iloc[0]['Vault_URL']) if not info_db.empty and current_trip in info_db['ID_Trip'].values else ""
+if not info_db.empty and current_trip in info_db['ID_Trip'].values:
+    val_vault = str(info_db[info_db['ID_Trip'] == current_trip].iloc[0]['Vault_URL'])
+else:
+    val_vault = ""
+
 folder_id_semasa = get_folder_id(val_vault)
 
-# --- 3. RUANGAN UPLOAD ---
+
+# --- 6. RUANGAN MUAT NAIK PREMIUM (GAMBAR LUAS & VIDEO) ---
 if folder_id_semasa:
     with st.expander("📤 Klik Sini Untuk Tambah Gambar / Video"):
-        st.markdown("**Format Disokong:** `PNG`, `JPG`, `JPEG`, `WEBP`, `GIF`, `HEIC`, `MP4`, `MOV`, `AVI`")
-        uploaded_files = st.file_uploader("Pilih Fail Media:", type=['png', 'jpg', 'jpeg', 'webp', 'gif', 'heic', 'mp4', 'mov', 'avi', 'mkv', '3gp'], accept_multiple_files=True)
+        st.markdown("**Sokongan Fail Luas:** `PNG`, `JPG`, `JPEG`, `WEBP`, `GIF`, `HEIC`, `MP4`, `MOV`, `AVI`")
+        st.info("💡 *Nota video:* Sila pastikan saiz fail video di bawah **20MB** bagi mengelakkan server sistem tersangkut semasa proses pemampatan (compression).")
+        
+        # Menerima format gambar yang lebih luas serta jenis fail video utama
+        uploaded_files = st.file_uploader(
+            "Pilih Fail Media:", 
+            type=['png', 'jpg', 'jpeg', 'webp', 'gif', 'heic', 'mp4', 'mov', 'avi', 'mkv', '3gp'], 
+            accept_multiple_files=True
+        )
         
         if st.button("🚀 Muat Naik Sekarang", type="primary", use_container_width=True):
             if uploaded_files:
                 progress_bar = st.progress(0)
                 status_text = st.empty()
+                
                 jumlah_fail = len(uploaded_files)
                 berjaya = 0
                 
                 for i, fail in enumerate(uploaded_files):
                     status_text.text(f"Memuat naik fail {i+1} dari {jumlah_fail}: {fail.name}...")
-                    if muat_naik_ke_gdrive(fail, fail.name, fail.type, folder_id_semasa): berjaya += 1
+                    id_baru = muat_naik_ke_gdrive(fail, fail.name, fail.type, folder_id_semasa)
+                    if id_baru:
+                        berjaya += 1
+                    
                     progress_bar.progress((i + 1) / jumlah_fail)
                 
                 status_text.text("Selesai!")
                 st.success(f"Berjaya memasukkan {berjaya} media baharu ke dalam sistem!")
-                st.cache_data.clear()
+                
                 dapatkan_media_dari_folder.clear()
                 st.rerun()
             else:
                 st.warning("Sila pilih fail media terlebih dahulu.")
 st.write("---")
 
-# --- 4. PAPARAN GALERI & BUTANG HAPUS ---
+
+# --- 7. PAPARAN INSTAGRAM GRID 3 SEBARIS (FOTO & VIDEO INTEGRATED) ---
 senarai_media = dapatkan_media_dari_folder(val_vault)
 
-if st.button("🔄 Segerakkan Galeri (Sync)", type="secondary"):
-    st.cache_data.clear()
-    dapatkan_media_dari_folder.clear()
-    st.rerun()
-
-st.markdown("<br>", unsafe_allow_html=True)
+col_refresh, _ = st.columns([1, 2])
+with col_refresh:
+    if st.button("🔄 Segerakkan (Sync) Galeri", use_container_width=True):
+        dapatkan_media_dari_folder.clear()
+        st.rerun()
 
 if len(senarai_media) > 0:
-    # Membina 3 kolum utama
+    # Bina susunan grid 3 kolum yang responsive menggunakan kelebihan native Streamlit
     cols = st.columns(3)
     
     for idx, item in enumerate(senarai_media):
         with cols[idx % 3]:
-            icon_overlay = '<div style="position:absolute; top:4px; right:4px; background:rgba(0,0,0,0.7); color:white; padding:2px 4px; border-radius:3px; font-size:9px; z-index:10;">🎥 VIDEO</div>' if item['is_video'] else ''
+            # Jika video, tambah ikon overlay kamera video di bucu atas kanan media
+            icon_overlay = '<div style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.7); color:white; padding:3px 6px; border-radius:5px; font-size:11px; z-index:10;">🎥 VIDEO</div>' if item['is_video'] else ''
             
-            # HTML Media Box
+            # Setiap kotak imej dibalut dengan pautan asal GDrive viewer. Bila klik, ia buka video player/high-res photo secara automatik.
             st.markdown(f"""
-            <div class="media-box">
+            <div style="position: relative; width: 100%; aspect-ratio: 1 / 1; margin-bottom: 8px;">
                 <a href="https://drive.google.com/file/d/{item['id']}/view?usp=drivesdk" target="_blank">
-                    <img src="{item['link']}" loading="lazy">
+                    <img src="{item['link']}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px; border: 1px solid #4d4d4d;">
                 </a>
                 {icon_overlay}
             </div>
             """, unsafe_allow_html=True)
             
+            # --- FUNGSI MODERASI: BUTANG HAPUS (HANYA DIPAPARKAN KEPADA ADMIN) ---
             if user_role == "Admin":
-                if st.button("🗑️ Padam", key=f"del_{item['id']}", use_container_width=True):
-                    with st.spinner("..."):
+                # Butang padam diletakkan tepat di bawah setiap kotak imej/video yang sepadan
+                if st.button("🗑️ Hapus Fail", key=f"del_{item['id']}", use_container_width=True, type="secondary"):
+                    with st.spinner("Sedang membuang fail dari awan..."):
                         try:
-                            url_api = st.secrets.get("APPS_SCRIPT_URL")
-                            payload_delete = {"action": "delete", "fileId": item['id']}
-                            res = requests.post(url_api, json=payload_delete)
-                            if res.status_code == 200 and res.json().get('status') == 'success':
-                                st.cache_data.clear()
-                                dapatkan_media_dari_folder.clear()
-                                st.rerun()
-                            else:
-                                st.error("Gagal.")
-                        except:
-                            st.error("Gagal memadam.")
+                            # Menggunakan fungsi update metadata untuk masukkan fail ke dalam tong sampah (Trash Bin) Google Drive
+                            drive_service.files().update(fileId=item['id'], body={'trashed': True}).execute()
+                            st.success("Fail berjaya dipadam!")
+                            
+                            # Bersihkan cache memori dan segar semula skrin galeri
+                            st.cache_data.clear()
+                            dapatkan_media_dari_folder.clear()
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Gagal memadam: {e}. Sila pastikan Service Account mempunyai akses Editor.")
 else:
-    st.info("📷 Galeri masih kosong.")
+    st.info("📷 Galeri kosong atau pautan folder belum ditetapkan.")
 
-# --- 5. PANEL CONFIGURATION ADMIN ---
+
+# --- 8. PANEL CONFIGURATION ADMIN ---
 if user_role == "Admin":
     st.write("---")
     st.subheader("⚙️ Panel Konfigurasi Folder (Admin)")
+    
     with st.form("form_folder_drive"):
+        st.write("Tampal pautan folder Google Drive untuk trip ini.")
         new_vault = st.text_input("Pautan Folder GDrive:", value=val_vault)
+        
         if st.form_submit_button("🚀 Simpan Kunci Folder"):
             if current_trip:
                 info_pukal = conn.read(worksheet="Info_Kem", ttl=0)
                 if 'Vault_URL' not in info_pukal.columns: info_pukal['Vault_URL'] = ""
                 info_pukal['Vault_URL'] = info_pukal['Vault_URL'].astype(str).replace('nan', '')
+                
                 if current_trip in info_pukal['ID_Trip'].values:
-                    info_pukal.at[info_pukal.index[info_pukal['ID_Trip'] == current_trip][0], 'Vault_URL'] = new_vault.strip()
+                    idx = info_pukal.index[info_pukal['ID_Trip'] == current_trip][0]
+                    info_pukal.at[idx, 'Vault_URL'] = new_vault.strip()
                 else:
-                    info_pukal = pd.concat([info_pukal, pd.DataFrame([{'ID_Trip': current_trip, 'Vault_URL': new_vault.strip()}])], ignore_index=True)
+                    new_row = pd.DataFrame([{'ID_Trip': current_trip, 'Vault_URL': new_vault.strip()}])
+                    info_pukal = pd.concat([info_pukal, new_row], ignore_index=True)
                 
                 conn.update(worksheet="Info_Kem", data=info_pukal)
                 st.cache_data.clear()
