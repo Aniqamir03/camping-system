@@ -407,7 +407,7 @@ except:
     nama_trip = "Sistem Perkhemahan"
     tarikh_str = ""
 
-st.title(f"🏕️ Papan Pemuka - {nama_trip}")
+st.title(f"🏕️ Dashboard - {nama_trip}")
 st.write(f"Selamat Datang, **{st.session_state.get('full_name', 'Pengguna')}**! Pantau profil dan kehadiran penuh ahli kumpulan di bawah.")
 
 if tarikh_str and tarikh_str.lower() != "nan":
@@ -417,13 +417,13 @@ if tarikh_str and tarikh_str.lower() != "nan":
         baki_hari = (tarikh_kem - hari_ini).days
 
         if baki_hari > 0:
-            st.info(f"⏳ **{baki_hari} Hari Lagi** sebelum kita bertolak ke {nama_trip}! Sediakan persiapan fizikal dan mental.")
+            st.info(f"⏳ **{baki_hari} Days Left** until {nama_trip}! Please ensure all physical and mental preparations are complete.")
         elif baki_hari == 0:
-            st.success("🎉 **HARI INI KITA BERTOLAK!** Jangan ada barang atau ahli yang tertinggal!")
+            st.success("🎉 **WE DEPART TODAY!** Ensure all gear is packed and all members are accounted for.")
         else:
-            st.write(f"✨ Kenangan Indah {nama_trip}.")
+            st.write(f"✨ Cherished Memories of {nama_trip}.")
     except:
-        st.warning("⚠️ Format tarikh trip tidak sah. Pastikan format YYYY-MM-DD.")
+        st.warning("⚠️ Invalid trip date format. Please use YYYY-MM-DD.")
 
 st.divider()
 
@@ -475,7 +475,7 @@ else:
 col_profil_utama, col_yt_utama = st.columns([1.8, 1.2])
 
 with col_profil_utama:
-    st.subheader("👥 Kad Profil Ahli")
+    st.subheader("👥 Member Profile Cards")
     avatar_default = "https://cdn-icons-png.flaticon.com/512/149/149071.png"
 
     if not merged_df.empty:
@@ -519,7 +519,7 @@ with col_profil_utama:
         st.info("Tiada ahli ditemui.")
 
 with col_yt_utama:
-    st.subheader("📺 Video Aktiviti")
+    st.subheader("📺 Activity Video")
     yt_embed = get_yt_embed_url(yt_url_raw)
 
     if yt_embed:
@@ -532,11 +532,11 @@ with col_yt_utama:
 </div>
 """, unsafe_allow_html=True)
     else:
-        st.warning("Admin belum menetapkan pautan video YouTube untuk trip ini.")
+        st.warning("Admin has not set a Video yet for this trip.")
 
 st.divider()
 
-st.subheader("📊 Rumusan Kehadiran & 📸 Kenang-Kenangan")
+st.subheader("📊 Attendance Summary & 📸 Memories")
 
 kategori_status = ["Hadir", "Tidak Hadir", "Belum Pasti", "Belum Sahkan"]
 warna_status = ["#0abf8a", "#ef4444", "#f59e0b", "#6b7280"]
@@ -605,7 +605,7 @@ html_kod = f"""
     <section class="dash-panel dash-summary-panel">
         <div class="dash-panel-head">
             <span>📊</span>
-            <strong>Rumusan</strong>
+            <strong>Summary</strong>
         </div>
 
         <div class="dash-donut-wrap">
@@ -625,7 +625,7 @@ html_kod = f"""
     <section class="dash-panel dash-memory-panel">
         <div class="dash-panel-head">
             <span>📸</span>
-            <strong>Kenangan</strong>
+            <strong>Memories</strong>
         </div>
 
         <div class="dash-memory-slider" id="dashMemorySlider">
@@ -1049,7 +1049,7 @@ components.html(html_kod, height=650)
 
 st.divider()
 
-if st.button("🚀 Buka Halaman Pengesahan Kehadiran (RSVP)", use_container_width=True, type="primary"):
+if st.button("🚀 Open Attendance Confirmation (RSVP)", use_container_width=True, type="primary"):
     st.switch_page("views/kehadiran.py")
 
 if st.session_state.get("role", "") == "Admin":
