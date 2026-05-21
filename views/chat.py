@@ -428,7 +428,7 @@ st.title(f"💬 Group Chat: {nama_trip_sembang}")
 
 st.markdown(
     '<div class="chat-hero">'
-    '<div class="chat-hero-title">Member Grop Chat</div>'
+    '<div class="chat-hero-title">Group Chat</div>'
     '<div class="chat-hero-sub">Discuss trip preparations, logistics, task assignments, and important information in one place.</div>'
     '</div>',
     unsafe_allow_html=True
