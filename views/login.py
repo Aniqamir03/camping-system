@@ -242,14 +242,14 @@ div[data-testid="stError"] {
 
 inject_css()
 
-st.title("🔐 Log Masuk Sistem")
+st.title("🔐 System Login")
 
 st.markdown(
     """
 <div class="login-hero">
     <div class="login-hero-icon">🏕️</div>
-    <div class="login-hero-title">Selamat datang semula</div>
-    <div class="login-hero-sub">Masukkan username dan kata laluan untuk mengakses sistem perkhemahan kumpulan.</div>
+    <div class="login-hero-title">Selamat datang</div>
+    <div class="login-hero-sub">Please Enter Your Credentials to access the System.</div>
 </div>
 """,
     unsafe_allow_html=True
@@ -260,7 +260,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 try:
     users_db = conn.read(worksheet="Users", ttl=0)
 except Exception:
-    st.error("⚠️ Ralat Pangkalan Data: Tab 'Users' tidak dijumpai di dalam Google Sheets. Sila hubungi Admin.")
+    st.error("⚠️ Database Error:  Please contact the administrator")
     st.stop()
 
 with st.form("login_form"):
@@ -307,7 +307,7 @@ with st.form("login_form"):
                 except Exception:
                     pass
 
-                st.success("✅ Log masuk berjaya! Memuatkan sistem...")
+                st.success("✅ Login successful! Loading system...")
 
                 st.session_state["logged_in"] = True
                 st.session_state["username"] = username_log
@@ -316,4 +316,4 @@ with st.form("login_form"):
 
                 st.rerun()
             else:
-                st.error("❌ Username atau Password salah! Sila cuba lagi.")
+                st.error("❌ Invalid credentials. Please verify your username and password.")
