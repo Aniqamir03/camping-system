@@ -647,12 +647,12 @@ def padam_media_gdrive(file_id):
 
 inject_css()
 
-st.title("🖼️ Galeri Automatik")
+st.title("🖼️ Gallery")
 
 st.markdown(
     '<div class="gallery-hero">'
-    '<div class="gallery-hero-title">Ruang memori foto dan video</div>'
-    '<div class="gallery-hero-sub">Klik pada media untuk paparan HD atau muat turun terus daripada Google Drive.</div>'
+    '<div class="gallery-hero-title">Photo and Video Memory Vault</div>'
+    '<div class="gallery-hero-sub">Click on media for HD view.</div>'
     '</div>',
     unsafe_allow_html=True
 )
@@ -680,8 +680,8 @@ else:
 folder_id_semasa = get_folder_id(val_vault)
 
 if folder_id_semasa:
-    with st.expander("📤 Klik Sini Untuk Tambah Gambar / Video Ke Galeri"):
-        st.markdown("**Sokongan Fail:** `PNG`, `JPG`, `JPEG`, `WEBP`, `GIF`, `HEIC`, `MP4`, `MOV`, `AVI`, `MKV`, `3GP`")
+    with st.expander("📤 Click Here to Add Photos / Videos to Gallery"):
+        st.markdown("**Supported File:** `PNG`, `JPG`, `JPEG`, `WEBP`, `GIF`, `HEIC`, `MP4`, `MOV`, `AVI`, `MKV`, `3GP`")
 
         uploaded_files = st.file_uploader(
             "Pilih Fail Media:",
@@ -689,7 +689,7 @@ if folder_id_semasa:
             accept_multiple_files=True
         )
 
-        if st.button("🚀 Muat Naik Sekarang", type="primary", use_container_width=True):
+        if st.button("🚀 Upload Now", type="primary", use_container_width=True):
             if uploaded_files:
                 progress_bar = st.progress(0)
                 status_text = st.empty()
@@ -706,25 +706,25 @@ if folder_id_semasa:
                     progress_bar.progress((i + 1) / jumlah_fail)
 
                 status_text.text("Selesai!")
-                st.success(f"Berjaya memuat naik {berjaya} fail media!")
+                st.success(f"Succesfull Upload {berjaya} Media File!")
 
                 dapatkan_media_dari_folder.clear()
                 st.rerun()
             else:
-                st.warning("Sila pilih fail terlebih dahulu.")
+                st.warning("Please select a file first.")
 else:
-    st.info("Folder galeri belum ditetapkan. Admin boleh tampal pautan folder Google Drive di panel bawah.")
+    st.info(" Admin Not set Gallery folder yet.")
 
 st.divider()
 
 senarai_media = dapatkan_media_dari_folder(val_vault)
 
-if st.button("🔄 Segerakkan (Sync) Galeri", use_container_width=True, type="secondary"):
+if st.button("🔄 Sync Gallery", use_container_width=True, type="secondary"):
     dapatkan_media_dari_folder.clear()
     st.rerun()
 
 st.markdown(
-    f'<div class="gallery-stat">📊 {len(senarai_media)} media aktif dikesan dalam folder Drive</div>',
+    f'<div class="gallery-stat">📊 {len(senarai_media)} active media detected </div>',
     unsafe_allow_html=True
 )
 
@@ -750,7 +750,7 @@ if len(senarai_media) > 0:
         unsafe_allow_html=True
     )
 else:
-    st.info("📷 Belum ada gambar.")
+    st.info("📷 No photos/Video.")
 
 if user_role == "Admin":
     st.divider()
