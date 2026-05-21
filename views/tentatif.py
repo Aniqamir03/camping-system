@@ -521,9 +521,9 @@ def stat_card(icon: str, label: str, value: str):
 
 inject_css()
 
-st.title("📅 Tentatif & Maklumat Lokasi")
+st.title("📅 Tentative & Location Details")
 
-default_lokasi = "Belum Ditetapkan (Sila isi di Panel Admin)"
+default_lokasi = "Not Set (Please configure in Admin Panel)"
 default_in = str(datetime.date.today())
 default_out = str(datetime.date.today())
 default_maps = "https://maps.google.com"
@@ -577,24 +577,24 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.markdown('<div class="info-stack">', unsafe_allow_html=True)
-    stat_card("🏕️", "Lokasi Tapak", lokasi_kem)
+    stat_card("🏕️", "Location", lokasi_kem)
     stat_card("📥", "Check-In", check_in)
     stat_card("📤", "Check-Out", check_out)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown('<p class="helper-text">🚘 <strong>Pautan Navigasi Pantas</strong></p>', unsafe_allow_html=True)
-    st.link_button("🗺️ Buka di Google Maps", maps_url)
-    st.link_button("🚙 Buka di Waze", waze_url)
+    st.markdown('<p class="helper-text">🚘 <strong>Quick Navigation Links</strong></p>', unsafe_allow_html=True)
+    st.link_button("🗺️ Google Maps", maps_url)
+    st.link_button("🚙 Waze", waze_url)
 
 with col2:
     if lokasi_kem != default_lokasi:
         components.iframe(embed_map_url, height=310)
     else:
-        st.warning("Peta akan dipaparkan setelah lokasi ditetapkan.")
+        st.warning("The map will be displayed once the location is set.")
 
 st.divider()
 
-section_header("🖼️", "Poster & Jadual Aktiviti Kumpulan")
+section_header("🖼️", "Group Activity Posters & Schedule")
 
 senarai_poster = [p for p in [p1, p2, p3] if p and p.lower() != "nan"]
 
@@ -920,21 +920,21 @@ showSlide(0);
     components.html(html_kod, height=740, scrolling=False)
 
 else:
-    st.info("ℹ️ Belum ada poster jadual aktiviti untuk trip ini. Admin akan kemaskini sebentar lagi.")
+    st.info("ℹ️ No activity posters are available for this trip yet. The admin will update them shortly.")
 
 st.divider()
 
-section_header("🌦️", "Ramalan Cuaca Kumpulan")
+section_header("🌦️", "Weather Forecast")
 
 if lokasi_kem != default_lokasi:
     lokasi_cuaca = lokasi_kem.split(",")[0].strip()
     lokasi_cuaca_url = urllib.parse.quote(lokasi_cuaca)
     yahoo_weather_url = f"https://search.yahoo.com/search?p={lokasi_cuaca_url}+weather"
 
-    st.write(f"Sistem dikesan bersambung dengan lokasi: **{lokasi_cuaca}**.")
-    st.link_button("✉️ Semak Cuaca Live di Yahoo Weather", yahoo_weather_url, type="primary")
+    st.write(f"System connected to location: **{lokasi_cuaca}**.")
+    st.link_button("✉️ Check Location Weather", yahoo_weather_url, type="primary")
 else:
-    st.info("Butang ramalan cuaca Yahoo akan diaktifkan sebaik sahaja Admin menetapkan lokasi tapak.")
+    st.info("The weather forecast button will be activated once the admin sets the campsite location.")
 
 if st.session_state.get("role") == "Admin":
     st.divider()
