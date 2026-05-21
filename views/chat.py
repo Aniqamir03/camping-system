@@ -428,8 +428,8 @@ st.title(f"💬 Group Chat: {nama_trip_sembang}")
 
 st.markdown(
     '<div class="chat-hero">'
-    '<div class="chat-hero-title">Ruang Chat bersama ahli</div>'
-    '<div class="chat-hero-sub">Bincang persiapan, logistik, agihan tugasan, dan maklumat penting percutian dalam satu tempat.</div>'
+    '<div class="chat-hero-title">Member Grop Chat</div>'
+    '<div class="chat-hero-sub">Discuss trip preparations, logistics, task assignments, and important information in one place.</div>'
     '</div>',
     unsafe_allow_html=True
 )
@@ -509,7 +509,7 @@ if not chat_semasa.empty:
 else:
     chat_html.append(
         '<div class="empty-chat">'
-        '<div><strong>Belum ada mesej.</strong><span>Mulakan perbualan pertama anda di bawah.</span></div>'
+        '<div><strong>No Message.</strong><span>Start your first conversation below.</span></div>'
         '</div>'
     )
 
@@ -526,19 +526,19 @@ if (shell) {
 </script>
 """, unsafe_allow_html=True)
 
-if st.button("👇 Ke Mesej Terkini"):
+if st.button("👇"):
     st.rerun()
 
 mesej_baru = st.chat_input("Type...")
 
 if mesej_baru:
     if not current_trip:
-        st.error("Ralat: Sila pilih trip aktif di menu tepi dahulu!")
+        st.error("Error: Please select an active trip from the sidebar first!")
     else:
         mesej_bersih = clean_text(mesej_baru)
 
         if not mesej_bersih:
-            st.warning("Mesej kosong tidak boleh dihantar.")
+            st.warning("Empty messages cannot be sent.")
         else:
             waktu_kl = datetime.now(ZoneInfo("Asia/Kuala_Lumpur")).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -562,4 +562,4 @@ if mesej_baru:
                 st.cache_data.clear()
                 st.rerun()
             except Exception as e:
-                st.error(f"Gagal menghantar mesej: {e}")
+                st.error(f"Faile to send a Message: {e}")
