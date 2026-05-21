@@ -485,12 +485,12 @@ def status_card(status: str, catatan: str):
 
 inject_css()
 
-st.title("📝 Pengesahan Kehadiran (RSVP)")
+st.title("📝 Attendance Confirmation (RSVP)")
 
 st.markdown(
     '<div class="rsvp-hero">'
-    '<div class="rsvp-hero-title">Sahkan status kehadiran anda</div>'
-    '<div class="rsvp-hero-sub">Maklumat ini membantu urusan logistik, tapak perkhemahan, dan penyelarasan ahli kumpulan.</div>'
+    '<div class="rsvp-hero-title">Confirm your attendance status</div>'
+    '<div class="rsvp-hero-sub">This information helps with logistics, campsite planning, and group coordination.</div>'
     '</div>',
     unsafe_allow_html=True
 )
@@ -506,7 +506,7 @@ try:
 except:
     pass
 
-st.info(f"📍 Anda sedang menguruskan status kehadiran untuk aktiviti: **{nama_trip_paparan}**")
+st.info(f"📍 You are currently managing the attendance status for: **{nama_trip_paparan}**")
 
 status_semasa_user = "Belum Sahkan"
 catatan_semasa_user = ""
@@ -533,7 +533,7 @@ status_card(status_semasa_user, catatan_semasa_user)
 
 with st.form("form_rsvp_page"):
     st.write("### Pilihan Kehadiran")
-    st.write("Sila buat atau tukar pilihan status anda di sini.")
+    st.write("Please update your attendance status below.")
 
     list_status = ["Hadir", "Tidak Hadir", "Belum Pasti"]
     default_idx = list_status.index(status_semasa_user) if status_semasa_user in list_status else 0
@@ -541,7 +541,7 @@ with st.form("form_rsvp_page"):
     inp_status = st.selectbox("Status Kehadiran:", list_status, index=default_idx)
     inp_catatan = st.text_input("Catatan / Nota Tambahan (Pilihan):", value=catatan_semasa_user)
 
-    submit_rsvp = st.form_submit_button("Hantar Status Kehadiran")
+    submit_rsvp = st.form_submit_button("Submit")
 
     if submit_rsvp:
         if not current_trip:
@@ -571,7 +571,7 @@ with st.form("form_rsvp_page"):
                 updated_kehadiran = data_rsvp_baru
 
             conn.update(worksheet="Kehadiran", data=updated_kehadiran)
-            st.success("Status kehadiran anda berjaya dikemaskini!")
+            st.success("Attendance status updated successfully!")
             st.cache_data.clear()
             st.rerun()
 
